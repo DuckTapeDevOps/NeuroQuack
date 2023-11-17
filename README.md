@@ -40,3 +40,10 @@ Here's what we're tackling next:
 - Improved error handling and user feedback for image uploads and generation.
 - Incorporation of user accounts and session management to save and retrieve past interactions.
 - Enhanced analytics to understand user engagement and model performance.
+
+
+## Working Examples:
+    - SDXL
+      - ECR: 763104351884.dkr.ecr.us-east-1.amazonaws.com/stabilityai-pytorch-inference:2.0.1-sgm0.1.0-gpu-py310-cu118-ubuntu20.04-sagemaker
+      - S3: s3://jumpstart-cache-prod-us-east-1/stabilityai-infer/prepack/v1.0.1/infer-prepack-model-imagegeneration-stabilityai-stable-diffusion-xl-base-1-0.tar.gz
+      - Instance Type: ml.g5.4xlarge
