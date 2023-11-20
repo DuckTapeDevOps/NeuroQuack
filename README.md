@@ -47,3 +47,6 @@ Here's what we're tackling next:
       - ECR: 763104351884.dkr.ecr.us-east-1.amazonaws.com/stabilityai-pytorch-inference:2.0.1-sgm0.1.0-gpu-py310-cu118-ubuntu20.04-sagemaker
       - S3: s3://jumpstart-cache-prod-us-east-1/stabilityai-infer/prepack/v1.0.1/infer-prepack-model-imagegeneration-stabilityai-stable-diffusion-xl-base-1-0.tar.gz
       - Instance Type: ml.g5.4xlarge
+
+## Local Testing Commands:
+  `uvicorn main:app --reload` to run FastAPI locally and reload with changes for testing

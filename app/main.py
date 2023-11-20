@@ -39,7 +39,7 @@ app = FastAPI()
 
 # Initialize SageMaker session and predictor
 sess = sagemaker.Session()
-sdxl_endpoint_name = "sagemak-develop-sdxl-wpj3-endpoint"
+sdxl_endpoint_name = "neuro-dev-sdxl-w8kx-endpoint"
 
 # Define the predictor (this could also be done inside the endpoint call for a fresh setup each time)
 sdxl_model_predictor = Predictor(

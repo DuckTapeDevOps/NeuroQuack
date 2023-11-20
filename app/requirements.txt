@@ -6,3 +6,8 @@ boto3
 python-multipart
 sagemaker
 pillow
+requests
+TwitchAPI
+twitchio
+llama-cpp-python==0.1.78
+nest_asyncio
