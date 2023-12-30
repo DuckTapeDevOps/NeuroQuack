@@ -1,17 +1,13 @@
-import json
 import asyncio
 import logging
-from concurrent.futures import ThreadPoolExecutor
 import os
 from twitchio.ext import commands
-import functionality.diffusion as diffusion
-import functionality.llm as llm
-import textwrap  # Add this line to import the textwrap module
+
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
 
 TWITCH_TOKEN = os.environ.get("TWITCH_TOKEN", "TWITCH_TOKEN not set")
-INITIAL_CHANNELS = os.environ.get("INITIAL_CHANNELS", "INITIAL_CHANNELS not set")
+INITIAL_CHANNELS = os.environ.get("INITIAL_CHANNELS", "INITIAL_CHANNELS not set") # Comma separated list of channels to join
 
 class TwitchBot(commands.Bot):
     def __init__(self):
@@ -36,17 +32,7 @@ class TwitchBot(commands.Bot):
     async def hello_command(self, ctx):
         print(f"Received command: {ctx.message.content}")
         await ctx.send(f"Testing this one {ctx.author.name}!")
-
-    # @commands.command(name="llm")
-    # async def llama_command(self, ctx):
-    #     await llm.LLM_Query(ctx)
-
-    # @commands.command(name="sdxl")
-    # async def sdxl_command(self, ctx):
-    #     await diffusion.diffuser_query(ctx)
-
-    
-            
+        
 if __name__ == "__main__":
     bot = TwitchBot()
     loop = asyncio.get_event_loop()

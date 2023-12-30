@@ -1,12 +1,1 @@
-fastapi>=0.68.0,<0.69.0
-pydantic>=1.8.0,<2.0.0
-uvicorn>=0.15.0,<0.16.0
-mangum 
-boto3 
-python-multipart
-sagemaker
-pillow
-requests
-TwitchAPI
 twitchio
-nest_asyncio
