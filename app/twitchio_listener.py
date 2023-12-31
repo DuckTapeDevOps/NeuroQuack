@@ -31,8 +31,8 @@ class TwitchBot(commands.Bot):
     @commands.command(name="hello")
     async def hello_command(self, ctx):
         print(f"Received command: {ctx.message.content}")
-        await ctx.send(f"Testing this one {ctx.author.name}!")
-        
+        await ctx.send(f"Hello {ctx.author.name}!")
+
 if __name__ == "__main__":
     bot = TwitchBot()
     loop = asyncio.get_event_loop()

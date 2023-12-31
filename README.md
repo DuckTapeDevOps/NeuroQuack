@@ -36,6 +36,10 @@ Future enhancements we're considering:
 
 # Walkthrough
 1) Set Environment Variables. Your bot Access Token can be found at https://twitchtokengenerator.com
+   1) `export TWITCH_TOKEN=<<YOUR_BOT_ACCESS_TOKEN>>`
+   2) `export INITIAL_CHANNELS=<<YOUR_CHANNEL_NAE>>`
+2) Run `make docker_build`
+3) Run `make docker_run`
 
 
 

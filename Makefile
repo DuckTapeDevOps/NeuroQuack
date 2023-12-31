@@ -1,11 +1,13 @@
 docker_build:
-	cd app && docker build -f local.Dockerfile -t twitch_bot:latest .
+	cd app && docker build -t twitch_bot:latest .
 
 docker_run:
-	docker run -d -p 4000:80 -e TWITCH_TOKEN -e INITIAL_CHANNELS twitch_bot:latest
+	$(eval CONTAINER_ID := $(shell docker run -d -p 4000:80 -e TWITCH_TOKEN -e INITIAL_CHANNELS twitch_bot:latest))
+	@echo Container started: $(CONTAINER_ID)
 
-start_virtual_env:
-	python3 -m venv myenv
-	source myenv/bin/activate
-	pip install -r requirements.txt
-	python3 twitch.py
+docker_logs:
+	docker logs $(CONTAINER_ID)
+
+docker_stop:
+	docker stop $(CONTAINER_ID)
+
