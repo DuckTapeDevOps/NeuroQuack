@@ -11,3 +11,10 @@ docker_logs:
 docker_stop:
 	docker stop $(CONTAINER_ID)
 
+mass_push:
+	cd app && mass image push massdriver/twitch_bot -f lambda.Dockerfile -a ${ARTIFACT_ID} -r us-east-1
+
+mass_publish:
+	cd lambda_bundle && mass bundle lint
+	cd lambda_bundle && mass bundle build
+	cd lambda_bundle && mass bundle publish

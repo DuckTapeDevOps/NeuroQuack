@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from mangum import Mangum
 from pydantic import BaseModel
 from twitchio.ext import commands
 from fastapi import FastAPI, HTTPException
@@ -68,3 +69,6 @@ class TwitchBot(commands.Bot):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+handler = Mangum(app)
