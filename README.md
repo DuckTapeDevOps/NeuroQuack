@@ -35,11 +35,23 @@ Future enhancements we're considering:
 - Integration with additional AWS services for monitoring, logging, and automated deployment pipelines.
 
 # Walkthrough
-1) Set Environment Variables. Your bot Access Token can be found at https://twitchtokengenerator.com
-   1) `export TWITCH_TOKEN=<<YOUR_BOT_ACCESS_TOKEN>>`
-   2) `export INITIAL_CHANNELS=<<YOUR_CHANNEL_NAE>>`
-2) Run `make docker_build`
-3) Run `make docker_run`
+Your bot Access Token can be found at https://twitchtokengenerator.com
+1) Run `make docker_build`
+2) Run `make docker_run`
+3) To start the bot, use the following cURL:
+```
+curl --location 'http://localhost:4000/start_bot' \
+--header 'Content-Type: application/json' \
+--data '{"twitch_token": "<<YOUR_BOT_ACCESS_TOKEN>>", "initial_channels": "<<YOUR_CHANNEL_NAME>>"}'
+```
+4) In your Twitch chat, send `!hello` and you should receive `Hello {ctx.author.name}!` from your bot in the Twitch chat!
+5) To stop the bot, use the following cURL:
+```
+curl --location --request POST 'http://localhost:4000/stop_bot' \
+--header 'Content-Type: application/json'
+```
+6) Run `docker logs <<container_id>>` to see any logs from the running container locally
+7) Run `docker stop <<container_id>>`
 
 
 

@@ -10,8 +10,8 @@ COPY . .
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Make port 80 available to the world outside this container
-EXPOSE 80
+# Expose the port the app runs on
+EXPOSE 8000
 
-# Run twitchio_listener.py when the container launches
-CMD ["python", "./twitchio_listener.py"]
+# Define the command to run your app
+CMD ["uvicorn", "twitchio_listener:app", "--host", "0.0.0.0", "--port", "8000"]

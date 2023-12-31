@@ -2,7 +2,7 @@ docker_build:
 	cd app && docker build -t twitch_bot:latest .
 
 docker_run:
-	$(eval CONTAINER_ID := $(shell docker run -d -p 4000:80 -e TWITCH_TOKEN -e INITIAL_CHANNELS twitch_bot:latest))
+	$(eval CONTAINER_ID := $(shell docker run -d -p 4000:8000 -e TWITCH_TOKEN -e INITIAL_CHANNELS twitch_bot:latest))
 	@echo Container started: $(CONTAINER_ID)
 
 docker_logs:
