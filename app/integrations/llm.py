@@ -26,11 +26,13 @@ DEFAULT_PARAMETERS = {
     "stop": ["###", "</s>"]
 }
 
+help_text = "To use !llm, type !llm <model> <prompt>. For example, !llm mistral explain my next step. The model can be either mistral or neural. The prompt can be any text you want to use to generate a response. The response will be sent to chat as a message."
+
 def prompt_llm(llm_type, prompt):
     if llm_type == "mistral":
         return generate_llm_response(prompt, mistral_endpoint_name)
     else:
-        return generate_llm_response(prompt, neural_endpoint_name)
+        return (help_text)
 
 def generate_llm_response(prompt: str, llm_endpoint_name: str):
     print(f"Generating response for prompt: {prompt} on endpoint {llm_endpoint_name}")

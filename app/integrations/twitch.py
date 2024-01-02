@@ -57,6 +57,9 @@ class TwitchBot(commands.Bot):
         # !llm mistral explain my next step 
         split = ctx.message.content.split(" ")
         llm_type = split[1]
+        if llm_type == "help":
+            await ctx.send(llm.help_text)
+            return
         temp_addon = " return the result in under 500 characters as a response to a user in chat"
         prompt = " ".join(split[2:])+temp_addon
         print(f"Received command: {ctx.message.content}")
@@ -73,6 +76,11 @@ class TwitchBot(commands.Bot):
         prompt = " ".join(split[2:])
         print(f"Received command: {ctx.message.content}")
         print(f"Prompt: {prompt}")
-        response = await diffusers.prompt_diffuser(diffuser_type, prompt)
+        response = diffusers.prompt_diffuser(diffuser_type, prompt)
         print(f"Response: {response}")
-        await ctx.send(" @" + ctx.author.name+ ": " + response)
+        await ctx.send(" @" + ctx.author.name+ " generated " +prompt + " using " + diffuser_type )
+
+    @commands.command(name="commands")
+    async def commands_command(self, ctx):
+        print(f"Received command: {ctx.message.content}")
+        await ctx.send(f"Available commands: !ping, !hello, !llm, !diffuse, !commands")

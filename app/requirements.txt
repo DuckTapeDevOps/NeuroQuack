@@ -3,3 +3,4 @@ fastapi
 uvicorn
 sagemaker
 boto3
+IPython

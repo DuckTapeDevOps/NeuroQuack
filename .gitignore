@@ -2,6 +2,9 @@ app/temp
 .vscode
 app/myenv
 app/pyenv.cfg
+
+infrastructure/lambdabundle/src/.terraform*
+infrastructure/lambdabundle/*.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
