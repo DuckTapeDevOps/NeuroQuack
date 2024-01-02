@@ -1,3 +1,5 @@
 twitchio
 fastapi
 uvicorn
+sagemaker
+boto3
