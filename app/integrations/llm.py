@@ -28,9 +28,11 @@ DEFAULT_PARAMETERS = {
 
 help_text = "To use !llm, type !llm <model> <prompt>. For example, !llm mistral explain my next step. The model can be either mistral or neural. The prompt can be any text you want to use to generate a response. The response will be sent to chat as a message."
 
-def prompt_llm(llm_type, prompt):
+def query(llm_type, prompt):
     if llm_type == "mistral":
         return generate_llm_response(prompt, mistral_endpoint_name)
+    elif llm_type == "neural":
+        return generate_llm_response(prompt, neural_endpoint_name)
     else:
         return (help_text)
 
@@ -42,15 +44,15 @@ def generate_llm_response(prompt: str, llm_endpoint_name: str):
     }
 
     try:
-        response = smr.invoke_endpoint(
+        response = smr.invoke_endpoint( # smr is the SageMaker runtime client via boto3
             EndpointName=llm_endpoint_name,
             ContentType=DEFAULT_CONTENT_TYPE,
             Body=json.dumps(request)
         )
-        response_body = response['Body'].read().decode('utf-8')
-        response_data = json.loads(response_body)
-        generated_text = response_data[0]['generated_text']
-        return generated_text
+        response_body = response['Body'].read().decode('utf-8')  # get the response
+        response_data = json.loads(response_body) # parse the response into JSON
+        generated_text = response_data[0]['generated_text'] # get the generated text from the response
+        return generated_text 
     except Exception as e:
         print(f"Error generating response: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error generating response: {str(e)}")

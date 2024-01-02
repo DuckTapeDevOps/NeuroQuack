@@ -3,8 +3,8 @@ app/temp
 app/myenv
 app/pyenv.cfg
 
-infrastructure/lambdabundle/src/.terraform*
-infrastructure/lambdabundle/*.json
+infrastructure/lambdabundle/*/.terraform*
+infrastructure/lambdabundle/*/*.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -7,6 +7,9 @@ from integrations import llm, diffusers
 bot = None
 
 def start_bot(body):
+    '''
+    Starts the Twitch bot
+    '''
     twitch_token = body.twitch_token
     initial_channels = body.initial_channels
     global bot
@@ -17,6 +20,9 @@ def start_bot(body):
     asyncio.create_task(bot.start())
 
 async def stop_bot():
+    '''
+    Stops the Twitch bot
+    '''
     global bot
     if bot is None:
         raise HTTPException(status_code=400, detail="Stream not running")
@@ -37,6 +43,7 @@ class TwitchBot(commands.Bot):
         try:
             await self.handle_commands(message)
         except AttributeError as e:
+            # This is a known issue with TwitchIO where messages from the bot itself will throw an error
             if "object has no attribute '_ws'" in str(e):
                 print(f"Error: Message author is None. Message content: {message.content}")
             else:
@@ -55,18 +62,18 @@ class TwitchBot(commands.Bot):
     @commands.command(name="llm")
     async def llm_command(self, ctx):
         # !llm mistral explain my next step 
-        split = ctx.message.content.split(" ")
-        llm_type = split[1]
-        if llm_type == "help":
+        split = ctx.message.content.split(" ") # ["!llm", "mistral", "explain", "my", "next", "step"]
+        llm_type = split[1] # "mistral"
+        if llm_type == "help":  # !llm help
             await ctx.send(llm.help_text)
             return
-        temp_addon = " return the result in under 500 characters as a response to a user in chat"
-        prompt = " ".join(split[2:])+temp_addon
-        print(f"Received command: {ctx.message.content}")
-        print(f"Prompt: {prompt}")
-        response = llm.prompt_llm(llm_type, prompt)
+        temp_addon = " return the result in under 500 characters as a response to a user in chat" 
+        prompt = " ".join(split[2:])+temp_addon # "explain my next step"
+        print(f"Received command: {ctx.message.content}") # !llm mistral explain my next step
+        print(f"Prompt: {prompt}") # explain my next step
+        response = llm.query(llm_type, prompt) # "mistral", "explain my next step"
         answer = response.split(temp_addon)[-1]
-        print(f"Response: {answer}")
+        print(f"Response: {answer}") 
         await ctx.send(" @" + ctx.author.name+ ": " + answer)
 
     @commands.command(name="diffuse")
@@ -79,6 +86,24 @@ class TwitchBot(commands.Bot):
         response = diffusers.prompt_diffuser(diffuser_type, prompt)
         print(f"Response: {response}")
         await ctx.send(" @" + ctx.author.name+ " generated " +prompt + " using " + diffuser_type )
+
+    @commands.command(name="welcome")
+    async def welcome_command(self, ctx):
+        diffuser_type = "sdxl"
+        llm_type = "mistral"
+        split = ctx.message.content.split(" ")
+        welcomee = split[1]
+        initial_prompt = " ".join(split[2:]) 
+        augmented_prompt = initial_prompt + " using descriptive words in plain english to paint a picture of the scene"
+        await ctx.send(f"Welcome to the stream "+ welcomee + "! Use '!commands' to see what I can do!")
+        diffuser_prompt = llm.query(llm_type, augmented_prompt)
+        print(diffuser_prompt)
+        minimize_prompt = "Summarize the following in under 500 characters to fit in my Twitch chat as a response to a user: " + diffuser_prompt
+        diffuser_prompt = llm.query(llm_type, minimize_prompt)
+        print("Minimized Response: \n" + diffuser_prompt)
+        await ctx.send(diffuser_prompt)
+        diffusers.prompt_diffuser(diffuser_type, diffuser_prompt)
+        await ctx.send(" @" + ctx.author.name + " generated " +initial_prompt + " using " + diffuser_type + " and " + llm_type)
 
     @commands.command(name="commands")
     async def commands_command(self, ctx):
