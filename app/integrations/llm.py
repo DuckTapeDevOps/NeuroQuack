@@ -4,9 +4,14 @@ from fastapi import HTTPException
 import sagemaker
 from pydantic import BaseModel
 import boto3
+from dotenv import load_dotenv
 
-mistral_endpoint_name = os.environ.get("MISTRAL_ENDPOINT_NAME", "endpoint-name-not-set")
-neural_endpoint_name = os.environ.get("NEURAL_ENDPOINT_NAME", "endpoint-name-not-set")
+
+if not os.getenv("MISTRAL_ENDPOINT_NAME"):
+    load_dotenv()
+
+MISTRAL_ENDPOINT_NAME = os.environ.get("MISTRAL_ENDPOINT_NAME", "endpoint-name-not-set")
+NEURAL_ENDPOINT_NAME = os.environ.get("NEURAL_ENDPOINT_NAME", "endpoint-name-not-set")
 sess = sagemaker.Session()
 
 # Create a SageMaker client
@@ -30,9 +35,9 @@ help_text = "To use !llm, type !llm <model> <prompt>. For example, !llm mistral 
 
 def query(llm_type, prompt):
     if llm_type == "mistral":
-        return generate_llm_response(prompt, mistral_endpoint_name)
+        return generate_llm_response(prompt, MISTRAL_ENDPOINT_NAME)
     elif llm_type == "neural":
-        return generate_llm_response(prompt, neural_endpoint_name)
+        return generate_llm_response(prompt, NEURAL_ENDPOINT_NAME)
     else:
         return (help_text)
 

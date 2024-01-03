@@ -4,3 +4,4 @@ uvicorn
 sagemaker
 boto3
 IPython
+python-dotenv

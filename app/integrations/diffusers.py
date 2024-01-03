@@ -14,12 +14,12 @@ import sagemaker
 from PIL import Image
 
 
-sdxl_endpoint_name = os.environ.get("SDXL_ENDPOINT_NAME", "endpoint-name-not-set")
+SDXL_ENDPOINT_NAME = os.environ.get("SDXL_ENDPOINT_NAME", "endpoint-name-not-set")
 
 sess = sagemaker.Session()
 
 sdxl_model_predictor = Predictor(
-            endpoint_name=sdxl_endpoint_name, 
+            endpoint_name=SDXL_ENDPOINT_NAME, 
             sagemaker_session=sess,
             serializer=JSONSerializer(),
             deserializer=BytesDeserializer()
@@ -27,11 +27,11 @@ sdxl_model_predictor = Predictor(
 
 def prompt_diffuser(diffuser_type, prompt):
     if diffuser_type == "sdxl":
-        return generate_image(prompt, sdxl_endpoint_name)
+        return generate_image(prompt, sdxl_model_predictor)
     else:
-        return generate_image(prompt, sdxl_endpoint_name)
+        return generate_image(prompt, SDXL_ENDPOINT_NAME)
 
-def generate_image(prompt: str, diffuser_endpoint_name: str):
+def generate_image(prompt: str, diffusion_model_predictor: str):
     try:
         payload = {
             "text_prompts":[{"text": prompt}],
@@ -46,7 +46,7 @@ def generate_image(prompt: str, diffuser_endpoint_name: str):
             "refiner_strength": 0.2
         }
         # Get prediction from SageMaker endpoint
-        sdxl_response = sdxl_model_predictor.predict(payload)
+        sdxl_response = diffusion_model_predictor.predict(payload)
         filename = sanitize_filename(prompt)
         return decode_and_show(sdxl_response, filename)
     except Exception as e:
@@ -83,10 +83,5 @@ def decode_and_show(response_bytes, filename):
     img_io.seek(0)
     img = Image.open(img_io)
     img.save("temp/"+filename)
-    img.save("temp/latest.png")
     img.close()
     return filename
-    
-
-
-    return img_io
