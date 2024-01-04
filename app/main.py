@@ -21,6 +21,7 @@ app = FastAPI()
 @app.post("/start_bot")
 async def start_bot(body: AuthInfo):
     twitch.start_bot(body.twitch_auth)
+    print("Started Twitch Bot")
     return {"status": "success"}
 
 @app.post("/stop_bot")

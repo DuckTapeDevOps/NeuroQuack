@@ -6,7 +6,9 @@ import json
 import os
 import re
 from tkinter import Image
+from typing import Tuple, Union
 from fastapi import HTTPException
+import requests
 from sagemaker.predictor import Predictor
 from sagemaker.serializers import JSONSerializer
 from sagemaker.deserializers import BytesDeserializer
@@ -15,6 +17,7 @@ from PIL import Image
 
 
 SDXL_ENDPOINT_NAME = os.environ.get("SDXL_ENDPOINT_NAME", "endpoint-name-not-set")
+DEFAULT_DIFFUSER_TYPE = os.environ.get("DEFAULT_DIFFUSER_TYPE", "sdxl")
 
 sess = sagemaker.Session()
 
@@ -24,14 +27,16 @@ sdxl_model_predictor = Predictor(
             serializer=JSONSerializer(),
             deserializer=BytesDeserializer()
         )
+diffuser_models = "sdxl"
+help_text = f"To use !diffuse, type !diffuse <model> <prompt>. For example, !diffuse sdxl explain my next step. The model can be  {diffuser_models}. The prompt can be any text you want to use to generate a response."
 
-def prompt_diffuser(diffuser_type, prompt):
-    if diffuser_type == "sdxl":
-        return generate_image(prompt, sdxl_model_predictor)
+def prompt_diffuser(prompt_map):
+    if prompt_map['diffuser_type']  == "sdxl":
+        return generate_image(prompt_map['prompt'], sdxl_model_predictor, prompt_map['user'])
     else:
-        return generate_image(prompt, SDXL_ENDPOINT_NAME)
+        return generate_image(prompt_map['prompt'], sdxl_model_predictor, prompt_map['user']) # default to sdxl
 
-def generate_image(prompt: str, diffusion_model_predictor: str):
+def generate_image(prompt: str, diffusion_model_predictor, author: str ):
     try:
         payload = {
             "text_prompts":[{"text": prompt}],
@@ -47,24 +52,112 @@ def generate_image(prompt: str, diffusion_model_predictor: str):
         }
         # Get prediction from SageMaker endpoint
         sdxl_response = diffusion_model_predictor.predict(payload)
-        filename = sanitize_filename(prompt)
+        filename = sanitize_filename(author, prompt)
         return decode_and_show(sdxl_response, filename)
     except Exception as e:
         # Handle general exceptions
         raise HTTPException(status_code=500, detail=str(e))
+
+def prompt_diffuser_image_to_image(prompt_map):
+    if prompt_map['diffuser_type']  == "sdxl":
+        return image_to_image(prompt_map['image_url'], prompt_map['prompt'], sdxl_model_predictor, prompt_map['user'])
+    else:
+        return image_to_image(prompt_map['image_url'], prompt_map['prompt'], sdxl_model_predictor, prompt_map['user']) # default to sdxl
+
+def image_to_image(image_url: str, prompt: str, diffusion_model_predictor,  user: str):
+    size = (512, 512)
+    image_path = download_profile_image(image_url, prompt)
+    encoded_image = encode_image(image_path, size=size)
+
+    payload = {
+        "text_prompts":[{"text": prompt}],
+        "init_image": encoded_image,
+        "cfg_scale": 9,
+        "image_strength": 0.8,
+        "seed": 42,
+        }
+    # Get prediction from SageMaker endpoint
+    try:
+        print(f"Generating image of {prompt} for {user}")
+        sdxl_response = diffusion_model_predictor.predict(payload)
+        filename = sanitize_filename(user, prompt)
+        return decode_and_show(sdxl_response, filename)
+    except Exception as e:
+        # Handle general exceptions
+        raise HTTPException(status_code=500, detail=str(e))
+
+def download_profile_image(url, username):
+    # Directory where images will be saved
+    directory = "temp/intermidiary_images"
+
+    # Ensure the directory exists
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    # The path to save the image
+    file_path = os.path.join(directory, f"{username}_profile.png")
+
+    # Fetch the image
+    response = requests.get(url)
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Write the image to a file
+        with open(file_path, 'wb') as file:
+            file.write(response.content)
+        print(f"Image saved as {file_path}")
+        return file_path
+    else:
+        print("Failed to download image")
+
+def encode_image(image_path: str, resize: bool = True, size: Tuple[int, int] = (1024, 1024)) -> Union[str, None]:
+    """
+    Encode an image as a base64 string, optionally resizing it to a supported resolution.
+
+    Args:
+        image_path (str): The path to the image file.
+        resize (bool, optional): Whether to resize the image. Defaults to True.
+
+    Returns:
+        Union[str, None]: The encoded image as a string, or None if encoding failed.
+    """
+    assert os.path.exists(image_path)
+
+    if resize:
+        image = Image.open(image_path)
+        image = image.resize(size)
+        image.save("image_path_resized.png")
+        image_path = "image_path_resized.png"
+    image = Image.open(image_path)
+    assert image.size == size
+    with open(image_path, "rb") as image_file:
+        img_byte_array = image_file.read()
+        # Encode the byte array as a Base64 string
+        try:
+            base64_str = base64.b64encode(img_byte_array).decode("utf-8")
+            return base64_str
+        except Exception as e:
+            print(f"Failed to encode image {image_path} as base64 string.")
+            print(e)
+            return None
+    image.close()
     
 
-def sanitize_filename(text):
+def sanitize_filename(user, prompt):
     # Remove non-alphanumeric characters
-    text = re.sub(r'[^a-zA-Z0-9 ]', '', text)
+    prompt = re.sub(r'[^a-zA-Z0-9 ]', '', prompt)
     # Replace spaces with underscores
-    text = text.replace(' ', '_')
+    prompt = prompt.replace(' ', '_')
     # Shorten the text if it's too long
-    safe_prompt = (text[:10] + '..') if len(text) > 10 else text
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    hash_part = hashlib.md5(text.encode()).hexdigest()[:6]
-    filename = f"{safe_prompt}_{timestamp}_{hash_part}.png"
+    safe_prompt = (prompt[:15] + '..') if len(prompt) > 15 else prompt
+    # Format the timestamp
+    timestamp = datetime.now().strftime('%H%M%S')
+    # Create the directory structure
+    date_directory = datetime.now().strftime('%Y%m%d')
+    # Assemble the filename
+    filename = f"{date_directory}/{user}/{safe_prompt}_{timestamp}.png"
     print(filename + " Finished")
+
     return filename
 
 
@@ -82,6 +175,11 @@ def decode_and_show(response_bytes, filename):
     # Save the image to a file
     img_io.seek(0)
     img = Image.open(img_io)
+    directory = os.path.join("temp", os.path.dirname(filename))
+
+    # Check if the directory exists, and create it if it doesn't
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     img.save("temp/"+filename)
     img.close()
     return filename
