@@ -120,9 +120,10 @@ class TwitchBot(commands.Bot):
         print(f"{welcomee}'s profile image URL is: {profile_image_url}")
         prompt_map = {
             "user": welcomee,
-            "diffuser_type": "sdxl", 
-            "prompt":  " ".join(ctx.message.content.split(" ")[1:]),
-            "image_url": profile_image_url
+            "diffuser_type": "sdxl",
+            "prompt":  "an astronaut joining the Ducktronaut crew to venture into the Matrix",
+            "image_url": profile_image_url,
+            "title": "welcome image"
         }
         diffusers.prompt_diffuser_image_to_image(prompt_map)
 

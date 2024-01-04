@@ -60,13 +60,21 @@ def generate_image(prompt: str, diffusion_model_predictor, author: str ):
 
 def prompt_diffuser_image_to_image(prompt_map):
     if prompt_map['diffuser_type']  == "sdxl":
-        return image_to_image(prompt_map['image_url'], prompt_map['prompt'], sdxl_model_predictor, prompt_map['user'])
+        return image_to_image(sdxl_model_predictor,
+                              prompt_map['image_url'], 
+                              prompt_map['prompt'],
+                              prompt_map['user'], 
+                              prompt_map.get('title', None))
     else:
-        return image_to_image(prompt_map['image_url'], prompt_map['prompt'], sdxl_model_predictor, prompt_map['user']) # default to sdxl
+        return image_to_image(sdxl_model_predictor,
+                              prompt_map['image_url'], 
+                              prompt_map['prompt'],
+                              prompt_map['user'], 
+                              prompt_map['title']) # default to sdxl
 
-def image_to_image(image_url: str, prompt: str, diffusion_model_predictor,  user: str):
+def image_to_image(diffusion_model_predictor, image_url: str, prompt: str,  user: str, title: str = None):
     size = (512, 512)
-    image_path = download_profile_image(image_url, prompt)
+    image_path = download_profile_image(image_url, user)
     encoded_image = encode_image(image_path, size=size)
 
     payload = {
@@ -80,7 +88,10 @@ def image_to_image(image_url: str, prompt: str, diffusion_model_predictor,  user
     try:
         print(f"Generating image of {prompt} for {user}")
         sdxl_response = diffusion_model_predictor.predict(payload)
-        filename = sanitize_filename(user, prompt)
+        if title is None:
+            filename = sanitize_filename(user, prompt)
+        else:
+            filename = sanitize_filename(user, title)
         return decode_and_show(sdxl_response, filename)
     except Exception as e:
         # Handle general exceptions
