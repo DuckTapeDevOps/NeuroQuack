@@ -95,6 +95,7 @@ def image_to_image(diffusion_model_predictor, image_url: str, prompt: str,  user
         return decode_and_show(sdxl_response, filename)
     except Exception as e:
         # Handle general exceptions
+        print(f"Error generating image: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 def download_profile_image(url, username):

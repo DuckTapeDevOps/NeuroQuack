@@ -5,3 +5,8 @@ sagemaker
 boto3
 IPython
 python-dotenv
+lanchain-experimental
+pillow
+open_clip_torch
+torch
+matplotlib

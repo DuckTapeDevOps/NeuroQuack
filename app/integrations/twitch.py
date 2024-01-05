@@ -31,14 +31,6 @@ async def stop_bot():
     await bot.close()
     bot = None
 
-# def get_user_profile_url(client, username):
-#     users = client.fetch_users(names=[username])
-#     if users:
-#         user = users[0]
-#         return user.profile_image
-#     else:
-#         return None
-
 class TwitchBot(commands.Bot):
     def __init__(self, token, channels):
         print(f"Initializing TwitchBot with channels {channels}")
@@ -79,15 +71,20 @@ class TwitchBot(commands.Bot):
             await ctx.send(llm.help_text)
             return
         
-        temp_addon = " return the result in under 500 characters as a response to a user in chat" 
-        prompt = " ".join(split[2:])+temp_addon # "explain my next step"
+        temp_addon = "Respond in less than 500 characters as a chatbot would: " 
+        prompt = temp_addon+" ".join(split[2:]) # "explain my next step"
         print(f"Received command: {ctx.message.content}") # !llm mistral explain my next step
         print(f"Prompt: {prompt}") # explain my next step
 
         response = llm.query(llm_type, prompt) # "mistral", "explain my next step"
-        answer = response.split(temp_addon)[-1]
+        answer = response.split(prompt)[-1]
         print(f"Response: {answer}") 
-        await ctx.send(" @" + ctx.author.name+ ": " + answer)
+        await ctx.send(answer)
+        # Splitting the answer into chunks of 500 characters
+        # chunks = [answer[i:i+500] for i in range(0, len(answer), 500)]
+
+        # for chunk in chunks:
+        #     await ctx.send(" @" + ctx.author.name+ ": " + chunk)
 
     @commands.command(name="diffuse")
     async def diffuse_command(self, ctx):
@@ -125,7 +122,11 @@ class TwitchBot(commands.Bot):
             "image_url": profile_image_url,
             "title": "welcome image"
         }
-        diffusers.prompt_diffuser_image_to_image(prompt_map)
+        try:
+            diffusers.prompt_diffuser_image_to_image(prompt_map)
+        except Exception as e:
+            print(f"Error: {e}")
+            ctx.send(f"Error: {e}")
 
     @commands.command(name="commands")
     async def commands_command(self, ctx):
