@@ -79,7 +79,13 @@ class TwitchBot(commands.Bot):
         response = llm.query(llm_type, prompt) # "mistral", "explain my next step"
         answer = response.split(prompt)[-1]
         print(f"Response: {answer}") 
-        await ctx.send(answer)
+
+        # Considering the length of username and additional characters in the message
+        max_length = 500 - len(ctx.author.name) - 4 # 4 for " @: "
+        if len(answer) > max_length:
+            answer = answer[:max_length] + ".."
+
+        await ctx.send(" @" + ctx.author.name+ ": " + answer)
         # Splitting the answer into chunks of 500 characters
         # chunks = [answer[i:i+500] for i in range(0, len(answer), 500)]
 
