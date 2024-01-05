@@ -14,10 +14,14 @@ from sagemaker.serializers import JSONSerializer
 from sagemaker.deserializers import BytesDeserializer
 import sagemaker
 from PIL import Image
+from dotenv import load_dotenv
 
+
+if not os.getenv("DEFAULT_DIFFUSER_TYPE"):
+    load_dotenv()
 
 SDXL_ENDPOINT_NAME = os.environ.get("SDXL_ENDPOINT_NAME", "endpoint-name-not-set")
-DEFAULT_DIFFUSER_TYPE = os.environ.get("DEFAULT_DIFFUSER_TYPE", "sdxl")
+DEFAULT_DIFFUSER_TYPE = os.environ.get("DEFAULT_DIFFUSER_TYPE", "default-not-set")
 
 sess = sagemaker.Session()
 
@@ -36,7 +40,7 @@ def prompt_diffuser(prompt_map):
     else:
         return generate_image(prompt_map['prompt'], sdxl_model_predictor, prompt_map['user']) # default to sdxl
 
-def generate_image(prompt: str, diffusion_model_predictor, author: str ):
+def generate_image(author: str, prompt: str,diffusion_model_predictor: Predictor = sdxl_model_predictor ):
     try:
         payload = {
             "text_prompts":[{"text": prompt}],
@@ -99,28 +103,8 @@ def image_to_image(diffusion_model_predictor, image_url: str, prompt: str,  user
         raise HTTPException(status_code=500, detail=str(e))
 
 def download_profile_image(url, username):
-    # Directory where images will be saved
-    directory = "temp/intermidiary_images"
-
-    # Ensure the directory exists
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-    # The path to save the image
-    file_path = os.path.join(directory, f"{username}_profile.png")
-
-    # Fetch the image
-    response = requests.get(url)
-
-    # Check if the request was successful
-    if response.status_code == 200:
-        # Write the image to a file
-        with open(file_path, 'wb') as file:
-            file.write(response.content)
-        print(f"Image saved as {file_path}")
-        return file_path
-    else:
-        print("Failed to download image")
+    download_image(url, "temp/intermidiary_images", f"{username}_profile.png")
+    return f"temp/intermidiary_images/{username}_profile.png"
 
 def encode_image(image_path: str, resize: bool = True, size: Tuple[int, int] = (1024, 1024)) -> Union[str, None]:
     """

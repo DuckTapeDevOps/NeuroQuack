@@ -1,9 +1,12 @@
 import asyncio
+import io
 from twitchio.ext import commands
 from twitchio import Client
 from fastapi import HTTPException
 from integrations import llm, diffusers
-
+from integrations.utility import download_image
+from integrations.clip import image_analysis, image_to_prompt
+from PIL import Image
 
 bot = None
 
@@ -114,22 +117,21 @@ class TwitchBot(commands.Bot):
     async def welcome_command(self, ctx):
         #Setting up intro variables
         split = ctx.message.content.split(" ")
+        mode = "best"
         welcomee = split[1].strip("@")
-
         users = await self.twitch_client.fetch_users(names=[welcomee])
         if users:
             user = users[0]
             profile_image_url = user.profile_image
+
         print(f"{welcomee}'s profile image URL is: {profile_image_url}")
-        prompt_map = {
-            "user": welcomee,
-            "diffuser_type": "sdxl",
-            "prompt":  "an astronaut joining the Ducktronaut crew to venture into the Matrix",
-            "image_url": profile_image_url,
-            "title": "welcome image"
-        }
+
+        filename, image_bytes = download_image(profile_image_url, "temp/profile_images", f"{welcomee}.png")
         try:
-            diffusers.prompt_diffuser_image_to_image(prompt_map)
+            prompt = image_to_prompt(Image.open(io.BytesIO(image_bytes)), mode)
+            print(f"Prompt: {prompt}")
+            response = diffusers.generate_image(welcomee, prompt)
+            ctx.send(" @" + ctx.author.name+ ": welcome to the crew! " + response)
         except Exception as e:
             print(f"Error: {e}")
             ctx.send(f"Error: {e}")

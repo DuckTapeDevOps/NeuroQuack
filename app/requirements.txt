@@ -5,8 +5,11 @@ sagemaker
 boto3
 IPython
 python-dotenv
-lanchain-experimental
+langchain-experimental
 pillow
 open_clip_torch
 torch
 matplotlib
+gradio
+clip-interrogator
+jinja2
