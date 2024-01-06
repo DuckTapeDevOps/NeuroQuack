@@ -14,10 +14,17 @@ from sagemaker.serializers import JSONSerializer
 from sagemaker.deserializers import BytesDeserializer
 import sagemaker
 from PIL import Image
+from dotenv import load_dotenv
+from integrations import utility
+import PIL
+import replicate
 
+
+if not os.getenv("DEFAULT_DIFFUSER_TYPE"):
+    load_dotenv()
 
 SDXL_ENDPOINT_NAME = os.environ.get("SDXL_ENDPOINT_NAME", "endpoint-name-not-set")
-DEFAULT_DIFFUSER_TYPE = os.environ.get("DEFAULT_DIFFUSER_TYPE", "sdxl")
+DEFAULT_DIFFUSER_TYPE = os.environ.get("DEFAULT_DIFFUSER_TYPE", "default-not-set")
 
 sess = sagemaker.Session()
 
@@ -27,36 +34,25 @@ sdxl_model_predictor = Predictor(
             serializer=JSONSerializer(),
             deserializer=BytesDeserializer()
         )
+
+sdxl_deployment = replicate.deployments.get("nonpareilnic/sdxl")
+
+
+def get_predictor(diffuser_type):
+    if diffuser_type == "sdxl":
+        return sdxl_model_predictor
+    else:
+        return sdxl_model_predictor # default to sdxl
+
+default_model_predictor = get_predictor(DEFAULT_DIFFUSER_TYPE)
+
 diffuser_models = "sdxl"
 help_text = f"To use !diffuse, type !diffuse <model> <prompt>. For example, !diffuse sdxl explain my next step. The model can be  {diffuser_models}. The prompt can be any text you want to use to generate a response."
 
 def prompt_diffuser(prompt_map):
-    if prompt_map['diffuser_type']  == "sdxl":
-        return generate_image(prompt_map['prompt'], sdxl_model_predictor, prompt_map['user'])
-    else:
-        return generate_image(prompt_map['prompt'], sdxl_model_predictor, prompt_map['user']) # default to sdxl
+    return text_to_image_deployed(user= prompt_map['user'], prompt= prompt_map['prompt'])
+    # return text_to_image(user= prompt_map['user'], prompt= prompt_map['prompt'], diffusion_model_predictor= get_predictor(prompt_map['diffuser_type']))
 
-def generate_image(prompt: str, diffusion_model_predictor, author: str ):
-    try:
-        payload = {
-            "text_prompts":[{"text": prompt}],
-            "width": 1024,
-            "height": 1024,
-            "sampler": "DPMPP2MSampler",
-            "cfg_scale": 7.0,
-            "steps": 50,
-            "seed": 0,
-            "use_refiner": True,
-            "refiner_steps": 40,
-            "refiner_strength": 0.2
-        }
-        # Get prediction from SageMaker endpoint
-        sdxl_response = diffusion_model_predictor.predict(payload)
-        filename = sanitize_filename(author, prompt)
-        return decode_and_show(sdxl_response, filename)
-    except Exception as e:
-        # Handle general exceptions
-        raise HTTPException(status_code=500, detail=str(e))
 
 def prompt_diffuser_image_to_image(prompt_map):
     if prompt_map['diffuser_type']  == "sdxl":
@@ -72,9 +68,41 @@ def prompt_diffuser_image_to_image(prompt_map):
                               prompt_map['user'], 
                               prompt_map['title']) # default to sdxl
 
+def text_to_image(user: str, prompt: str,diffusion_model_predictor: Predictor = sdxl_model_predictor ):
+    augmented_prompt = f"{user} as a {prompt}"   
+    try:
+        payload = {
+            "text_prompts":[{"text": augmented_prompt}],
+            "width": 1024,
+            "height": 1024,
+            "sampler": "DPMPP2MSampler",
+            "cfg_scale": 7.0,
+            "steps": 50,
+            "seed": 0,
+            "use_refiner": True,
+            "refiner_steps": 40,
+            "refiner_strength": 0.2
+        }
+        # Get prediction from SageMaker endpoint
+        sdxl_response = diffusion_model_predictor.predict(payload)
+        filename = sanitize_filename(user, prompt)
+        return decode_and_save(sdxl_response, filename)
+    except Exception as e:
+        # Handle general exceptions
+        raise HTTPException(status_code=500, detail=str(e))
+    
+def text_to_image_deployed(user: str, prompt: str):
+    prediction = sdxl_deployment.predictions.create(
+        input={"prompt": prompt}
+    )
+    prediction.wait()
+    print(prediction.output)
+    filename = sanitize_filename(user, prompt)
+    return decode_and_save(prediction.output, filename)
+
 def image_to_image(diffusion_model_predictor, image_url: str, prompt: str,  user: str, title: str = None):
     size = (512, 512)
-    image_path = download_profile_image(image_url, user)
+    image_path = utility.download_image(image_url, "temp/profile_images", user+".png")
     encoded_image = encode_image(image_path, size=size)
 
     payload = {
@@ -92,35 +120,26 @@ def image_to_image(diffusion_model_predictor, image_url: str, prompt: str,  user
             filename = sanitize_filename(user, prompt)
         else:
             filename = sanitize_filename(user, title)
-        return decode_and_show(sdxl_response, filename)
+        return decode_and_save(sdxl_response, filename)
     except Exception as e:
         # Handle general exceptions
         print(f"Error generating image: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
 
-def download_profile_image(url, username):
-    # Directory where images will be saved
-    directory = "temp/intermidiary_images"
 
-    # Ensure the directory exists
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+# def manipulate_image(prompt, image_path):
+#     # Load the image
+#     image = PIL.Image.open(image_path)
 
-    # The path to save the image
-    file_path = os.path.join(directory, f"{username}_profile.png")
+#     # Process the image with the new prompt
+#     images = PIPE(prompt, image=image, num_inference_steps=30, image_guidance_scale=1.5, guidance_scale=7).images
 
-    # Fetch the image
-    response = requests.get(url)
+#     # Save the manipulated image
+#     manipulated_image_path = "manipulated_output.png"
+#     images[0].save(manipulated_image_path)
+#     return manipulated_image_path
 
-    # Check if the request was successful
-    if response.status_code == 200:
-        # Write the image to a file
-        with open(file_path, 'wb') as file:
-            file.write(response.content)
-        print(f"Image saved as {file_path}")
-        return file_path
-    else:
-        print("Failed to download image")
 
 def encode_image(image_path: str, resize: bool = True, size: Tuple[int, int] = (1024, 1024)) -> Union[str, None]:
     """
@@ -173,7 +192,7 @@ def sanitize_filename(user, prompt):
     return filename
 
 
-def decode_and_show(response_bytes, filename):
+def decode_and_save(response_bytes, filename):
     # Parse the JSON response to get the base64-encoded string
     response_json = json.loads(response_bytes)
     image_base64 = response_json['generated_image']
@@ -193,5 +212,6 @@ def decode_and_show(response_bytes, filename):
     if not os.path.exists(directory):
         os.makedirs(directory)
     img.save("temp/"+filename)
+    img.save("temp/latest.png")
     img.close()
     return filename

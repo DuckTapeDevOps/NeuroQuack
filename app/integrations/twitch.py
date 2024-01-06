@@ -1,9 +1,10 @@
 import asyncio
+import io
 from twitchio.ext import commands
 from twitchio import Client
 from fastapi import HTTPException
-from integrations import llm, diffusers
-
+from integrations import llm, diffusers, utility, clip
+from PIL import Image
 
 bot = None
 
@@ -81,7 +82,7 @@ class TwitchBot(commands.Bot):
         print(f"Response: {answer}") 
 
         # Considering the length of username and additional characters in the message
-        max_length = 500 - len(ctx.author.name) - 4 # 4 for " @: "
+        max_length = 450 - len(ctx.author.name) - 4 # 4 for " @: "
         if len(answer) > max_length:
             answer = answer[:max_length] + ".."
 
@@ -115,24 +116,55 @@ class TwitchBot(commands.Bot):
         #Setting up intro variables
         split = ctx.message.content.split(" ")
         welcomee = split[1].strip("@")
-
         users = await self.twitch_client.fetch_users(names=[welcomee])
         if users:
             user = users[0]
             profile_image_url = user.profile_image
+
         print(f"{welcomee}'s profile image URL is: {profile_image_url}")
-        prompt_map = {
-            "user": welcomee,
-            "diffuser_type": "sdxl",
-            "prompt":  "an astronaut joining the Ducktronaut crew to venture into the Matrix",
-            "image_url": profile_image_url,
-            "title": "welcome image"
-        }
+
+        filename, image_bytes = utility.download_image(profile_image_url, "temp/profile_images", f"{welcomee}.png")
         try:
-            diffusers.prompt_diffuser_image_to_image(prompt_map)
+            response = clip.clip_interrogate_deployed(filename)
+            await ctx.send(" @" + ctx.author.name+ ": welcome to the crew! You look just like " + response)
+            diffusers.text_to_image(welcomee, response)
         except Exception as e:
             print(f"Error: {e}")
-            ctx.send(f"Error: {e}")
+            await ctx.send(f"Error: {e}")
+
+    @commands.command(name="interrogate")
+    async def interrogate_command(self, ctx):
+        #Setting up intro variables
+        split = ctx.message.content.split(" ")
+        welcomee = split[1].strip("@")
+        users = await self.twitch_client.fetch_users(names=[welcomee])
+        if users:
+            user = users[0]
+            profile_image_url = user.profile_image
+
+        print(f"{welcomee}'s profile image URL is: {profile_image_url}")
+
+        filename, image_bytes = utility.download_image(profile_image_url, "temp/profile_images", f"{welcomee}.png")
+        try:
+            response = clip.clip_interrogate_deployed(filename)
+            await ctx.send(" @" + ctx.author.name+ ": " + response)
+        except Exception as e:
+            print(f"Error: {e}")
+            await ctx.send(f"Error: {e}")
+
+
+    # @commands.command(name="manipulate")
+    # async def manipulate_command(self, ctx, prompt):
+    #     # Assume 'profile_image_redux' is the path to the saved image from SDXL
+    #     profile_image_redux = "temp/latest.png"
+
+    #     # Call the manipulate function with the new prompt
+    #     try:
+    #         new_image_path = manipulate_image(prompt, profile_image_redux)
+    #         await ctx.send(file=discord.File(new_image_path))
+    #     except Exception as e:
+    #         print(f"Error: {e}")
+    #         await ctx.send(f"Error: {e}")
 
     @commands.command(name="commands")
     async def commands_command(self, ctx):

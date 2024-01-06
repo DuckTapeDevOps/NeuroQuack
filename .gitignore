@@ -304,3 +304,4 @@ schema-ui.json
 # Plugins
 .infracost
 .vscode/
+cache/
