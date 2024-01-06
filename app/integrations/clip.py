@@ -23,3 +23,4 @@ def clip_interrogate_deployed(image_path: str):
     )
     prediction.wait()
     print(prediction.output)
+    return prediction.output

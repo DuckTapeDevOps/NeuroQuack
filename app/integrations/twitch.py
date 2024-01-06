@@ -132,18 +132,39 @@ class TwitchBot(commands.Bot):
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
 
-    @commands.command(name="manipulate")
-    async def manipulate_command(self, ctx, prompt):
-        # Assume 'profile_image_redux' is the path to the saved image from SDXL
-        profile_image_redux = "temp/latest.png"
+    @commands.command(name="interrogate")
+    async def interrogate_command(self, ctx):
+        #Setting up intro variables
+        split = ctx.message.content.split(" ")
+        welcomee = split[1].strip("@")
+        users = await self.twitch_client.fetch_users(names=[welcomee])
+        if users:
+            user = users[0]
+            profile_image_url = user.profile_image
 
-        # Call the manipulate function with the new prompt
+        print(f"{welcomee}'s profile image URL is: {profile_image_url}")
+
+        filename, image_bytes = utility.download_image(profile_image_url, "temp/profile_images", f"{welcomee}.png")
         try:
-            new_image_path = manipulate_image(prompt, profile_image_redux)
-            await ctx.send(file=discord.File(new_image_path))
+            response = clip.clip_interrogate_deployed(filename)
+            await ctx.send(" @" + ctx.author.name+ ": " + response)
         except Exception as e:
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
+
+
+    # @commands.command(name="manipulate")
+    # async def manipulate_command(self, ctx, prompt):
+    #     # Assume 'profile_image_redux' is the path to the saved image from SDXL
+    #     profile_image_redux = "temp/latest.png"
+
+    #     # Call the manipulate function with the new prompt
+    #     try:
+    #         new_image_path = manipulate_image(prompt, profile_image_redux)
+    #         await ctx.send(file=discord.File(new_image_path))
+    #     except Exception as e:
+    #         print(f"Error: {e}")
+    #         await ctx.send(f"Error: {e}")
 
     @commands.command(name="commands")
     async def commands_command(self, ctx):
