@@ -50,7 +50,7 @@ diffuser_models = "sdxl"
 help_text = f"To use !diffuse, type !diffuse <model> <prompt>. For example, !diffuse sdxl explain my next step. The model can be  {diffuser_models}. The prompt can be any text you want to use to generate a response."
 
 def prompt_diffuser(prompt_map):
-    return text_to_image_deployed(user= prompt_map['user'], prompt= prompt_map['prompt'])
+    return text_to_image_replicate(user= prompt_map['user'], prompt= prompt_map['prompt'])
     # return text_to_image(user= prompt_map['user'], prompt= prompt_map['prompt'], diffusion_model_predictor= get_predictor(prompt_map['diffuser_type']))
 
 
@@ -91,14 +91,13 @@ def text_to_image(user: str, prompt: str,diffusion_model_predictor: Predictor = 
         # Handle general exceptions
         raise HTTPException(status_code=500, detail=str(e))
     
-def text_to_image_deployed(user: str, prompt: str):
+def text_to_image_replicate(user: str, prompt: str):
     prediction = sdxl_deployment.predictions.create(
         input={"prompt": prompt}
     )
     prediction.wait()
     print(prediction.output)
-    filename = sanitize_filename(user, prompt)
-    return decode_and_save(prediction.output, filename)
+    return prediction.output
 
 def image_to_image(diffusion_model_predictor, image_url: str, prompt: str,  user: str, title: str = None):
     size = (512, 512)
