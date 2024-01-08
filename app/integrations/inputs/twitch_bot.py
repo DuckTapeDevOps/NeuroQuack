@@ -2,10 +2,11 @@ import asyncio
 import io
 from jsonschema import ValidationError
 from twitchio.ext import commands
-from twitchio import Client
+from twitchio import Client, PartialUser
 from fastapi import HTTPException
 from integrations import llm, diffusers, utility, clip
 from PIL import Image
+import concurrent.futures
 
 
 from pydantic import BaseModel
@@ -24,12 +25,12 @@ class Command(BaseModel):
         extra_param = split[2] if len(split) > 2 else None
         return cls(command=command, target_user=target_user, extra_param=extra_param)
     
-
+loading_emoji = "duckta12Type"
 
 
 
 bot = None
-
+twitch_token = None
 def start_bot(body):
     '''
     Starts the Twitch bot
@@ -106,6 +107,10 @@ class TwitchBot(commands.Bot):
 
     @commands.command(name="llm")
     async def llm_command(self, ctx):
+        """
+        !llm help
+        !llm mistral explain my next step
+        """
         # !llm mistral explain my next step 
         split = ctx.message.content.split(" ") # ["!llm", "mistral", "explain", "my", "next", "step"]
         llm_type = split[1] # "mistral"
@@ -153,6 +158,39 @@ class TwitchBot(commands.Bot):
         print(f"Response: {response}")
         await ctx.send(" @" + prompt_map['user'] + " generated this image:" + response[0])
     
+    @commands.command(name="so")
+    async def so_command(self, ctx):
+        #Setting up intro variables
+        print(f"Received command: {ctx.message.content}")
+        split = ctx.message.content.split(" ")
+        welcomee = split[1].strip("@")
+        users = await self.twitch_client.fetch_users(names=[welcomee])
+        if users:
+            user = users[0]
+            profile_image_url = user.profile_image
+
+        print(f"{welcomee}'s profile image URL is: {profile_image_url}")
+
+        filename, image_bytes = utility.download_image(profile_image_url, "temp/profile_images", f"{welcomee}.png")
+        try:
+            shoutout_message = await PartialUser.shoutout(self, twitch_token, welcomee, 491187438)
+            await ctx.send(shoutout_message)
+            await ctx.send(loading_emoji + " @" + ctx.author.name)
+            response = clip.clip_interrogate(filename)
+            print(f"Interrogation response: {response}")
+            await ctx.send(f"Shoutout to {welcomee}! duckta12Cheers")
+
+            # Create a text-to-image rendering
+            image_response = await diffusers.text_to_image(welcomee, response)
+            await ctx.send(f"Check out this cool image of @{welcomee}: {image_response}")
+
+            # Post the streamer's description to chat
+            await ctx.send(f"Here's a bit about {welcomee}: REALLY COOL, I WEAR! ducta12Bang ")
+        except Exception as e:
+            print(f"Error in !so command: {e}")
+            await ctx.send(f"Error: {e}")
+
+
     @commands.command(name="welcome")
     async def welcome_command(self, ctx):
         response = await self.interrogate_command(ctx)
@@ -183,27 +221,15 @@ class TwitchBot(commands.Bot):
 
         filename, image_bytes = utility.download_image(profile_image_url, "temp/profile_images", f"{welcomee}.png")
         try:
-            await ctx.send("duckta12type @" + ctx.author.name)
+            await ctx.send(loading_emoji + " @" + ctx.author.name)
             response = clip.clip_interrogate(filename)
-            await ctx.send(" @" + ctx.author.name+ ": " + response)
+            print(f"Interrogation response: {response}")
+            
+            await ctx.send(" @" + ctx.author.name+ "really looks like... " + response)
             return response
         except Exception as e:
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
-
-
-    # @commands.command(name="manipulate")
-    # async def manipulate_command(self, ctx, prompt):
-    #     # Assume 'profile_image_redux' is the path to the saved image from SDXL
-    #     profile_image_redux = "temp/latest.png"
-
-    #     # Call the manipulate function with the new prompt
-    #     try:
-    #         new_image_path = manipulate_image(prompt, profile_image_redux)
-    #         await ctx.send(file=discord.File(new_image_path))
-    #     except Exception as e:
-    #         print(f"Error: {e}")
-    #         await ctx.send(f"Error: {e}")
 
     @commands.command(name="commands")
     async def commands_command(self, ctx):

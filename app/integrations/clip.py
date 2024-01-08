@@ -20,8 +20,8 @@ def clip_interrogate(image_path: str):
         "pharmapsychotic/clip-interrogator:8151e1c9f47e696fa316146a2e35812ccf79cfc9eba05b11c7f450155102af70",
             input={
                 "mode": "fast",
-                "clip_model_name": "ViT-bigG-14/laion2b_s39b_b160k",
+                "clip_model_name": "ViT-L-14/openai",
                 "image": open(image_path, "rb")
             }
         )
-    print(output)
+    return output

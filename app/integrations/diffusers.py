@@ -50,8 +50,8 @@ diffuser_models = "sdxl"
 help_text = f"To use !diffuse, type !diffuse <model> <prompt>. For example, !diffuse sdxl explain my next step. The model can be  {diffuser_models}. The prompt can be any text you want to use to generate a response."
 
 def prompt_diffuser(prompt_map):
-    return text_to_image_replicate(user= prompt_map['user'], prompt= prompt_map['prompt'])
-    # return text_to_image(user= prompt_map['user'], prompt= prompt_map['prompt'], diffusion_model_predictor= get_predictor(prompt_map['diffuser_type']))
+    # return text_to_image_replicate(user= prompt_map['user'], prompt= prompt_map['prompt'])
+    return text_to_image(user= prompt_map['user'], prompt= prompt_map['prompt'], diffusion_model_predictor= get_predictor(prompt_map['diffuser_type']))
 
 
 def prompt_diffuser_image_to_image(prompt_map):
