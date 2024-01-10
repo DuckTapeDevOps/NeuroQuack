@@ -5,9 +5,18 @@ from fastapi import FastAPI, HTTPException
 import uvicorn
 from integrations.inputs import twitch_bot
 
+# {
+#   "twitch_auth": {
+#     "twitch_token": "{{TOKEN}}",
+#     "initial_channels": "DuckTapeDevOps, MatisseTec",
+#     "emojis": {
+#         "computing_emoji": "duckta12Type"
+#     }
+
 class TwitchCredentials(BaseModel):
     twitch_token: str
     initial_channels: str
+    emojis: dict
 
 class AuthInfo(BaseModel):
     twitch_auth: TwitchCredentials

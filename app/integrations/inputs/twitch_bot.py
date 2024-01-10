@@ -5,6 +5,7 @@ from twitchio.ext import commands
 from twitchio import Client, PartialUser
 from fastapi import HTTPException
 from integrations import llm, diffusers, utility, clip
+# from utility.cost import analysis, prediction
 from PIL import Image
 import concurrent.futures
 
@@ -25,11 +26,12 @@ class Command(BaseModel):
         extra_param = split[2] if len(split) > 2 else None
         return cls(command=command, target_user=target_user, extra_param=extra_param)
     
-loading_emoji = "duckta12Type"
+loading_emoji = "duckta12NeuroQuack"
 
 
 
 bot = None
+emojis = None
 twitch_token = None
 def start_bot(body):
     '''
@@ -37,12 +39,17 @@ def start_bot(body):
     '''
     twitch_token = body.twitch_token
     initial_channels = body.initial_channels
-    global bot
+    global bot, emojis
+    emojis = body.emojis
     if bot is not None:
         raise HTTPException(status_code=400, detail="Stream already running")
 
     bot = TwitchBot(twitch_token, initial_channels.split(","))
     asyncio.create_task(bot.start())
+    print(f"Started Twitch Bot in channels {initial_channels}")
+    
+    # bot.get_channel("ducktapedevops").send(f"Cost prediction: $1.00/hr")
+    return {"status": "success"}
 
 async def stop_bot():
     '''
@@ -51,7 +58,9 @@ async def stop_bot():
     global bot
     if bot is None:
         raise HTTPException(status_code=400, detail="Stream not running")
-
+    # response = CostAnalysis.get_cost_analysis()
+    # print(f"Cost analysis: {response}")
+    # await bot.get_channel("neuroquack").send(f"Cost analysis: {response}")
     await bot.close()
     bot = None
 
@@ -142,6 +151,11 @@ class TwitchBot(commands.Bot):
 
     @commands.command(name="diffuse")
     async def diffuse_command(self, ctx):
+        """
+        !diffuse help
+        !diffuse sdxl foo looking like bar
+        """
+        await ctx.send(utility.computing(ctx.author.name)) #computing
         message = ctx.message.content
         prompt_map = {
             "user": ctx.author.name,
@@ -175,7 +189,7 @@ class TwitchBot(commands.Bot):
         try:
             shoutout_message = await PartialUser.shoutout(self, twitch_token, welcomee, 491187438)
             await ctx.send(shoutout_message)
-            await ctx.send(loading_emoji + " @" + ctx.author.name)
+            await ctx.send(loading_emoji + " @" + welcomee)
             response = clip.clip_interrogate(filename)
             print(f"Interrogation response: {response}")
             await ctx.send(f"Shoutout to {welcomee}! duckta12Cheers")
@@ -189,7 +203,83 @@ class TwitchBot(commands.Bot):
         except Exception as e:
             print(f"Error in !so command: {e}")
             await ctx.send(f"Error: {e}")
+    
+    @commands.command(name="remove_bg")
+    async def remove_bg_command(self, ctx):
+        #Setting up intro variables
+        print(f"Received command: {ctx.message.content}")
+        split = ctx.message.content.split(" ")
+        welcomee = split[1].strip("@")
+        background_removal
 
+    @commands.command(name="replicate")
+    async def replicate_command(self, ctx):
+        """
+        !replicate help
+        Replicate takes in a url and returns a new image based on that image's interrogation response
+        """
+        #Setting up intro variables
+        input_map = utility.input_map(ctx)
+        user = input_map["user"]
+        input = input_map["input"]
+        if input == "help":
+            await ctx.send(diffusers.help_text)
+            return
+        await ctx.send(utility.computing(user)) #computing
+        if "@" in input:
+            welcomee = input.strip("@")
+            users = await self.twitch_client.fetch_users(names=[welcomee])
+            if users:
+                user = users[0]
+                profile_image_url = user.profile_image
+            print(f"profile_image: {profile_image_url}")
+            input = profile_image_url
+        try:
+            print(f"Interrogating: {input}")
+            ci_response = clip.clip_interrogate(input)
+            print(f"Interrogation response: {ci_response}")
+            prompt_map = {
+                "user": ctx.author.name,
+                "diffuser_type": "sdxl_replicate",
+                "prompt":  ci_response
+            }
+            sdxl_response = diffusers.prompt_diffuser(prompt_map)
+            print(f"Response: {sdxl_response}")
+            await ctx.send(" @" + ctx.author.name+ ": " + sdxl_response[0])
+            return sdxl_response
+        except Exception as e:
+            print(f"Error: {e}")
+            await ctx.send(f"Error: {e}")
+
+    @commands.command(name="emoji")
+    async def emoji_command(self, ctx):
+        #Setting up intro variables
+        split = ctx.message.content.split(" ")
+        welcomee = split[1].strip("@")
+        users = await self.twitch_client.fetch_users(names=[welcomee])
+        if users:
+            user = users[0]
+            profile_image_url = user.profile_image
+
+        print(f"{welcomee}'s profile image URL is: {profile_image_url}")
+
+        filename, image_bytes = utility.download_image(profile_image_url, "temp/profile_images", f"{welcomee}.png")
+        try:
+            await ctx.send(loading_emoji + " @" + ctx.author.name)
+            ci_response = clip.clip_interrogate(filename)
+            print(f"Interrogation response: {ci_response}")
+            prompt_map = {
+                "user": welcomee,
+                "diffuser_type": "sdxl_replicate",
+                "prompt":  ci_response
+            }
+            sdxl_response = diffusers.prompt_diffuser(prompt_map)
+            print(f"Response: {sdxl_response}")
+            await ctx.send(" @" + prompt_map['user'] + " looks like: " + sdxl_response[0])
+            return sdxl_response
+        except Exception as e:
+            print(f"Error: {e}")
+            await ctx.send(f"Error: {e}")
 
     @commands.command(name="welcome")
     async def welcome_command(self, ctx):
@@ -209,20 +299,14 @@ class TwitchBot(commands.Bot):
 
     @commands.command(name="interrogate")
     async def interrogate_command(self, ctx):
+        print(f"Received command: {ctx.message.content}")
         #Setting up intro variables
         split = ctx.message.content.split(" ")
-        welcomee = split[1].strip("@")
-        users = await self.twitch_client.fetch_users(names=[welcomee])
-        if users:
-            user = users[0]
-            profile_image_url = user.profile_image
-
-        print(f"{welcomee}'s profile image URL is: {profile_image_url}")
-
-        filename, image_bytes = utility.download_image(profile_image_url, "temp/profile_images", f"{welcomee}.png")
+        input = split[1:][0]
         try:
             await ctx.send(loading_emoji + " @" + ctx.author.name)
-            response = clip.clip_interrogate(filename)
+            print(f"Interrogating: {input}")
+            response = clip.clip_interrogate(input)
             print(f"Interrogation response: {response}")
             
             await ctx.send(" @" + ctx.author.name+ "really looks like... " + response)

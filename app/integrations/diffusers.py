@@ -18,6 +18,24 @@ from dotenv import load_dotenv
 from integrations import utility
 import PIL
 import replicate
+import concurrent.futures
+
+# async def txt2img(message, prompt, negative, stepMode, width, height):
+#     print('Generating image for ' + str(message.chat.id))
+
+#     def blocking_code():
+#         return replicate.run(
+#             "tstramer/midjourney-diffusion:436b051ebd8f68d23e83d22de5e198e0995357afef113768c20f0b6fcef23c8b",
+#             input={"prompt": "mdjrny-v4 " + prompt, "negative_prompt": negative, 
+#                    "num_inference_steps": stepMode*10, "width": width, "height": height}
+#         )
+
+#     with concurrent.futures.ThreadPoolExecutor() as executor:
+#         future = executor.submit(blocking_code)
+#         output = await loop.run_in_executor(None, future.result)
+
+#     print(output[0] + '\n')
+#     return await message.answer_photo(output[0])
 
 
 if not os.getenv("DEFAULT_DIFFUSER_TYPE"):
@@ -36,6 +54,7 @@ sdxl_model_predictor = Predictor(
         )
 
 sdxl_deployment = replicate.deployments.get("nonpareilnic/sdxl")
+background_removal_deployment = replicate.deployments.get("ducktapedevops/background-removal")
 
 
 def get_predictor(diffuser_type):
@@ -50,6 +69,10 @@ diffuser_models = "sdxl"
 help_text = f"To use !diffuse, type !diffuse <model> <prompt>. For example, !diffuse sdxl explain my next step. The model can be  {diffuser_models}. The prompt can be any text you want to use to generate a response."
 
 def prompt_diffuser(prompt_map):
+    if prompt_map['diffuser_type'] == "help" or prompt_map['prompt'] == "help":
+        return help_text
+    if prompt_map['diffuser_type'] == "sdxl_replicate":
+        return text_to_image_replicate(user= prompt_map['user'], prompt= prompt_map['prompt'])
     # return text_to_image_replicate(user= prompt_map['user'], prompt= prompt_map['prompt'])
     return text_to_image(user= prompt_map['user'], prompt= prompt_map['prompt'], diffusion_model_predictor= get_predictor(prompt_map['diffuser_type']))
 
@@ -69,10 +92,10 @@ def prompt_diffuser_image_to_image(prompt_map):
                               prompt_map['title']) # default to sdxl
 
 def text_to_image(user: str, prompt: str,diffusion_model_predictor: Predictor = sdxl_model_predictor ):
-    augmented_prompt = f"{user} as a {prompt}"   
+    # augmented_prompt = f"{user} as a {prompt}"   
     try:
         payload = {
-            "text_prompts":[{"text": augmented_prompt}],
+            "text_prompts":[{"text": prompt}],
             "width": 1024,
             "height": 1024,
             "sampler": "DPMPP2MSampler",
@@ -90,6 +113,13 @@ def text_to_image(user: str, prompt: str,diffusion_model_predictor: Predictor = 
     except Exception as e:
         # Handle general exceptions
         raise HTTPException(status_code=500, detail=str(e))
+    
+def background_removal(img_url):
+    prediction = background_removal_deployment.predictions.create(
+    input={"file": img_url}
+    )
+    prediction.wait()
+    print(prediction.output)
     
 def text_to_image_replicate(user: str, prompt: str):
     prediction = sdxl_deployment.predictions.create(
