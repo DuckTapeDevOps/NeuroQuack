@@ -1,0 +1,342 @@
+schema: draft-07
+name: fargate
+description: fargate hosting for neuroquack
+source_url: github.com/YOUR_ORG/fargate
+access: private
+type: application
+
+app:
+  envs: 
+    S3_BUCKET: '.connections.s3_bucket.data.infrastructure.arn | split(":")[-1]'
+    SDXL_ENDPOINT_NAME: '.connections.sdxl_endpoint.data.infrastructure.arn | split(":")[-1]'
+    DEFAULT_DIFFUSER_TYPE: "sdxl"
+    DEFAULT_LLM_TYPE: "neural"
+    NEURAL_ENDPOINT_NAME: '.connections.neural_endpoint.data.infrastructure.arn | split(":")[-1]'
+    REPLICATE_ORG: "ducktapedevops"
+    DISCORD_INVITE: "https://discord.gg/4D5qzdEh"
+    BOT_NAME: "neuroquack"
+    AWS_DEFAULT_REGION: '.connections.aws_authentication.data.infrastructure.region'
+
+    # Use jq expressions to build environment variables from input params or connections
+    # LOG_LEVEL: .params.configuration.log_level
+    # MONGO_DSN: .connections.mongo_authentication.data.authentication.username + ":" + .connections.mongo_authentication.data.authentication.password + "@" + .connections.mongo_authentication.data.authentication.hostname + ":" + (.connections.mongo_authentication.data.authentication.port|tostring)
+  policies: []
+    # Use jq expressions to select policies from artifact security blocks
+    # - .connections.sqs.data.security.iam.subscribe
+  secrets: {}
+    # ENV_NAME:
+    #   required: # true or false - whether massdriver should enforce this value being set
+    #   title: # Set the title
+    #   description: # Set a description
+
+params:
+  required:
+    - image
+    - force_new_deployment
+    - runtime
+    - autoscaling
+    - ports
+    - monitoring
+  properties:
+    image:
+      title: Container Image
+      type: object
+      required:
+      - repository
+      - tag
+      properties:
+        repository:
+          $md.immutable: true
+          title: Repository
+          description: Container repository to use for this application.
+          type: string
+        tag:
+          title: Image Tag
+          $ref: https://raw.githubusercontent.com/massdriver-cloud/artifact-definitions/main/definitions/types/docker-image-tag.json
+          default: latest
+    force_new_deployment:
+      title: Force New Deployment
+      description: "Enable to force a new task deployment of the service. This can be used to update tasks to use a newer Docker image with same image/tag combination (e.g., myimage:latest)"
+      type: boolean
+      default: false
+    runtime:
+      title: Runtime Configuration
+      type: object
+      properties:
+        launch_type:
+          title: Launch Type
+          description: ECS launch type. EC2 and Fargate are supported. EC2 requires that the ECS cluster has EC2 container instances provisioned.
+          type: string
+          default: EC2
+          oneOf:
+          - title: EC2
+            const: EC2
+          - title: Fargate
+            const: FARGATE
+        cpu:
+          title: CPU Units
+          description: CPU units to allocate for the task. 1024 is equivalent to one full CPU.
+          type: integer
+        memory:
+          title: Memory
+          description: Memory to allocate for the task in MiB.
+          type: integer
+      dependencies:
+        launch_type:
+          oneOf:
+          - properties:
+              launch_type:
+                const: EC2
+              cpu:
+                minimum: 1
+              memory:
+                minimum: 1
+          - properties:
+              launch_type:
+                const: FARGATE
+              cpu:
+                enum: [256, 512, 1024, 2048, 4096, 8192, 16384]
+            dependencies:
+              cpu:
+                oneOf:
+                - properties:
+                    cpu:
+                      const: 256
+                    memory:
+                      enum: [512, 1024, 2048]
+                - properties:
+                    cpu:
+                      const: 512
+                    memory:
+                      enum: [1024, 2048, 3072, 4096]
+                - properties:
+                    cpu:
+                      const: 1024
+                    memory:
+                      enum: [2048, 3072, 4096, 5120, 6144, 7168, 8192]
+                - properties:
+                    cpu:
+                      const: 2048
+                    memory:
+                      enum: [4096, 5120, 6144, 7168, 8192, 9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384]
+                - properties:
+                    cpu:
+                      const: 4096
+                    memory:
+                      enum: [8192, 9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384, 17408, 18432, 19456, 20480, 21504, 22528, 23552, 24576, 25600, 26624, 27648, 28672, 29696, 30720]
+                - properties:
+                    cpu:
+                      const: 8192
+                    memory:
+                      enum: [16384, 20480, 24576, 28672, 32768, 36864, 40960, 45056, 49152, 53248, 57344, 61440]
+                - properties:
+                    cpu:
+                      const: 16384
+                    memory:
+                      enum: [32768, 40960, 49152, 57344, 65536, 73728, 81920, 90112, 98304, 106496, 114688, 122880]
+    autoscaling:
+      title: Autoscaling
+      description: Manage the number of concurrent replicas of your application
+      type: object
+      required:
+      - min_replicas
+      - max_replicas
+      - target_cpu_percent
+      properties:
+        min_replicas:
+          title: Minimum Replicas
+          description: Minimum number of replicas the autoscaler will maintain, based on target resource utilization
+          type: integer
+          minimum: 1
+          default: 1
+        max_replicas:
+          title: Maximum Replicas
+          description: Maximum number of replicas the autoscaler will provision, based on target resource utilization
+          type: integer
+          minimum: 1
+          default: 10
+        target_cpu_percent:
+          title: Target CPU Utilization Percentage
+          description: The percentage of allocated CPU resources the autoscaler should target, based on the values specified in the 'Resources' section. If utilization rises sufficiently above this percentage, replicas will be added. If utilization drops sufficiently below this percentage, replicas will be removed.
+          type: integer
+          minimum: 1
+          default: 80
+    ports:
+      title: Container Ports
+      description: Describe container ports to expose, as well as cluster ingress rules to route external traffic into the service.
+      type: array
+      items:
+        type: object
+        required:
+        - port
+        - enable_ingress
+        properties:
+          port:
+            title: Port
+            description: The container port the application will listen on.
+            $ref: https://raw.githubusercontent.com/massdriver-cloud/artifact-definitions/main/definitions/types/port.json
+          enable_ingress:
+            title: Enable ALB Ingress
+            description: Enable this to define ALB ingress rules to securely route traffic into the service.
+            type: boolean
+            default: false
+        dependencies:
+          enable_ingress:
+            oneOf:
+            - properties:
+                enable_ingress:
+                  const: false
+            - properties:
+                enable_ingress:
+                  const: true
+                ingresses:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      hostname:
+                        title: HTTP Hostname
+                        description: The hostname this application should be accessable on, such as www.example.com. This domain must be associated with the ECS cluster.
+                        type: string
+                        pattern: ^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$
+                        message:
+                          pattern: Hostname should consist of letters, numbers, periods and hyphens, such as www.example.com
+                      path:
+                        title: HTTP Path
+                        description: The HTTP path which, when appended to the host above, this application will serve traffic on
+                        type: string
+                        default: "/"
+                        pattern: ^\/.*$
+                        message:
+                          pattern: Must begin with a '/' and be a valid HTTP endpoint
+                      create_dns:
+                        title: Create DNS Record
+                        description: "Checking this will create a DNS record for this hostname. NOTE: DNS records can only be created **once**, so this should **only** be used if the hostname is a unique subdomain. If the subdomain is used by multiple services, it should be created in the ECS cluster configuration so there won't be collisions from multiple services."
+                        type: boolean
+                    required:
+                    - hostname
+                    - path
+                    - create_dns
+              required:
+                - ingresses
+    monitoring:
+      title: Monitoring
+      type: object
+      required:
+      - logging
+      properties:
+        logging:
+          title: Logging Configuration
+          type: object
+          required:
+          - destination
+          properties:
+            destination:
+              title: Destination
+              type: string
+              description: Configure the destination for where application logs should be sent.
+              default: disabled
+              oneOf:
+              - title: Disabled
+                const: disabled
+              - title: AWS Cloudwatch
+                const: awslogs
+          dependencies:
+            destination:
+              oneOf:
+              - properties:
+                  destination:
+                    const: disabled
+              - properties:
+                  destination:
+                    const: awslogs
+                  retention:
+                    title: Retention
+                    description: Configure the duration (in days) you'd like logs to be retained before automatic deletion.
+                    type: integer
+                    default: 7
+                    enum: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653]
+                required:
+                - retention
+    # Uncomment the section below to begin adding any application-specific configuration that is appropriate. See the app.envs section above for how to set environment values from these settings.
+    # configuration:
+    #   title: Configuration
+    #   description: Application specific configuration settings
+    #   type: object
+    #   properties:
+    #     log_level:
+    #       title: Log Level
+    #       type: string
+
+
+connections:
+  required:
+    - aws_authentication
+    - ecs_cluster
+    - sdxl_endpoint
+    - neural_endpoint
+  properties:
+    sdxl_endpoint:
+      $ref: massdriver/aws-sagemaker-endpoint
+    neural_endpoint:
+      $ref: massdriver/aws-sagemaker-endpoint
+    aws_authentication:
+      $ref: massdriver/aws-iam-role
+    ecs_cluster:
+      $ref: massdriver/aws-ecs-cluster
+
+
+ui:
+  ui:order:
+    - image
+    - force_new_deployment
+    - runtime
+    - autoscaling
+    - ports
+    - monitoring
+    - "*"
+  runtime:
+    ui:order:
+      - launch_type
+      - cpu
+      - memory
+      - "*"
+  autoscaling:
+    ui:order:
+      - min_replicas
+      - max_replicas
+      - target_cpu_percent
+      - "*"
+  ports:
+    items:
+      ui:order:
+        - port
+        - enable_ingress
+        - "*"
+      ingresses:
+        items:
+          ui:order:
+            - hostname
+            - path
+            - create_dns
+            - "*"
+  monitoring:
+    ui:order:
+      - logging
+      - "*"
+    logging:
+      ui:order:
+        - destination
+        - "*"
+
+
+# SDXL_ENDPOINT_NAME=neuro-dev-sdxl-6szd-endpoint
+# DEFAULT_DIFFUSER_TYPE=sdxl
+# MISTRAL_ENDPOINT_NAME=neuro-dev-mistral7b-st8l-endpoint
+# DEFAULT_LLM_TYPE=neural
+# NEURAL_ENDPOINT_NAME=neuro-dev-neuralchat-28rm-endpoint
+# REPLICATE_ORG = ducktapedevops
+# DISCORD_INVITE = https://discord.gg/4D5qzdEh
+# BOT_NAME = neuroquack
+# AWS_DEFAULT_REGION = us-east-1

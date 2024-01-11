@@ -13,6 +13,8 @@ if not os.getenv("MISTRAL_ENDPOINT_NAME"):
 MISTRAL_ENDPOINT_NAME = os.environ.get("MISTRAL_ENDPOINT_NAME", "endpoint-name-not-set")
 NEURAL_ENDPOINT_NAME = os.environ.get("NEURAL_ENDPOINT_NAME", "endpoint-name-not-set")
 DEFAULT_LLM_TYPE = os.environ.get("DEFAULT_LLM_TYPE", "default-not-set")
+AWS_REGION_NAME = os.environ.get("AWS_REGION_NAME", "default-not-set") # "us-east-1"
+
 
 sess = sagemaker.Session()
 

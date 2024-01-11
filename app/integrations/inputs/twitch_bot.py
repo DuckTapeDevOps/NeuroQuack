@@ -25,8 +25,10 @@ class Command(BaseModel):
         target_user = split[1].strip("@") if len(split) > 1 else None
         extra_param = split[2] if len(split) > 2 else None
         return cls(command=command, target_user=target_user, extra_param=extra_param)
-    
+
 loading_emoji = "duckta12NeuroQuack"
+discord_invite = "https://discord.gg/4D5qzdEh"
+
 
 
 
@@ -84,6 +86,32 @@ class TwitchBot(commands.Bot):
             else:
                 raise e
             
+    async def _process_input(self, ctx):
+        """
+        Processes the input and fetches profile image URL if needed.
+        !
+
+        Args:
+            ctx: The context of the command.
+
+        Returns:
+            A tuple containing the processed input and user object.
+        """
+        input_map = utility.input_map(ctx)
+        user = input_map["user"]
+        input = input_map["input"]
+
+        if "@" in input:
+            target = input.strip("@")
+            target_list = await self.twitch_client.fetch_users(names=[target])
+            if target_list:
+                target_info = target_list[0]
+                profile_image_url = target_info.profile_image
+                print(f"profile_image: {profile_image_url}")
+                return user, target, profile_image_url
+
+        return user, "no_user", input
+            
     # commands
         # !test
         # !llm neural what is foobar
@@ -104,15 +132,15 @@ class TwitchBot(commands.Bot):
             # Handle validation errors
             print("Invalid command format")
 
+    @commands.command(name="discord")
+    async def discord_command(self, ctx):
+        print(f"Received command: {ctx.message.content}")
+        await ctx.send(f"Join the Discord! {discord_invite}")
+
     @commands.command(name="ping")
     async def ping_command(self, ctx):
         print(f"Received command: {ctx.message.content}")
         await ctx.send(f"Pong! {ctx.author.name}")
-
-    @commands.command(name="hello")
-    async def hello_command(self, ctx):
-        print(f"Received command: {ctx.message.content}")
-        await ctx.send(f"Hello {ctx.author.name}!")
 
     @commands.command(name="llm")
     async def llm_command(self, ctx):
@@ -177,40 +205,61 @@ class TwitchBot(commands.Bot):
         #Setting up intro variables
         print(f"Received command: {ctx.message.content}")
         split = ctx.message.content.split(" ")
-        welcomee = split[1].strip("@")
-        users = await self.twitch_client.fetch_users(names=[welcomee])
+        target = split[1].strip("@")
+        users = await self.twitch_client.fetch_users(names=[target])
         if users:
             user = users[0]
             profile_image_url = user.profile_image
 
-        print(f"{welcomee}'s profile image URL is: {profile_image_url}")
+        print(f"{target}'s profile image URL is: {profile_image_url}")
 
-        filename, image_bytes = utility.download_image(profile_image_url, "temp/profile_images", f"{welcomee}.png")
+        filename, image_bytes = utility.download_image(profile_image_url, "temp/profile_images", f"{target}.png")
         try:
-            shoutout_message = await PartialUser.shoutout(self, twitch_token, welcomee, 491187438)
+            shoutout_message = await PartialUser.shoutout(self, twitch_token, target, 491187438)
             await ctx.send(shoutout_message)
-            await ctx.send(loading_emoji + " @" + welcomee)
+            await ctx.send(loading_emoji + " @" + target)
             response = clip.clip_interrogate(filename)
             print(f"Interrogation response: {response}")
-            await ctx.send(f"Shoutout to {welcomee}! duckta12Cheers")
+            await ctx.send(f"Shoutout to {target}! duckta12Cheers")
 
             # Create a text-to-image rendering
-            image_response = await diffusers.text_to_image(welcomee, response)
-            await ctx.send(f"Check out this cool image of @{welcomee}: {image_response}")
+            image_response = await diffusers.text_to_image(target, response)
+            await ctx.send(f"Check out this cool image of @{target}: {image_response}")
 
             # Post the streamer's description to chat
-            await ctx.send(f"Here's a bit about {welcomee}: REALLY COOL, I WEAR! ducta12Bang ")
+            await ctx.send(f"Here's a bit about {target}: REALLY COOL, I WEAR! ducta12Bang ")
         except Exception as e:
             print(f"Error in !so command: {e}")
             await ctx.send(f"Error: {e}")
     
     @commands.command(name="remove_bg")
     async def remove_bg_command(self, ctx):
-        #Setting up intro variables
-        print(f"Received command: {ctx.message.content}")
-        split = ctx.message.content.split(" ")
-        welcomee = split[1].strip("@")
-        background_removal
+        await ctx.send(utility.computing(ctx.author.name)) #computing
+        user, target, input = await self._process_input(ctx) # {user of the command}{target}{target_profile_url OR prompt}
+        response_url = diffusers.background_removal(input)
+        print(f"Response: {response_url}")
+        await ctx.send(" @" + user + ": " + "Background removed: "+ response_url)
+
+    @commands.command(name="prompt")
+    async def prompt_command(self, ctx):
+        await ctx.send(utility.computing(ctx.author.name))
+        user, target, model, inferencing, input = await self._process_input(ctx) # {user of the command}{target}{model}{inferencing}{target_profile_url OR prompt}
+        try:
+            print(f"Interrogating: {input}")
+            ci_response = clip.clip_interrogate(input)
+            print(f"Interrogation response: {ci_response}")
+            prompt_map = {
+                "user": user,
+                "diffuser_type": "neural",
+                "prompt":  ci_response
+            }
+            sdxl_response = llm.query("sdxl", ci_response)
+            print(f"Response: {sdxl_response}")
+            await ctx.send(" @" + user + ": " + sdxl_response[0])
+            return sdxl_response
+        except Exception as e:
+            print(f"Error: {e}")
+            await ctx.send(f"Error: {e}")
 
     @commands.command(name="replicate")
     async def replicate_command(self, ctx):
@@ -219,33 +268,19 @@ class TwitchBot(commands.Bot):
         Replicate takes in a url and returns a new image based on that image's interrogation response
         """
         #Setting up intro variables
-        input_map = utility.input_map(ctx)
-        user = input_map["user"]
-        input = input_map["input"]
-        if input == "help":
-            await ctx.send(diffusers.help_text)
-            return
-        await ctx.send(utility.computing(user)) #computing
-        if "@" in input:
-            welcomee = input.strip("@")
-            users = await self.twitch_client.fetch_users(names=[welcomee])
-            if users:
-                user = users[0]
-                profile_image_url = user.profile_image
-            print(f"profile_image: {profile_image_url}")
-            input = profile_image_url
+        user, target, input = await self._process_input(ctx) # {user of the command}{target}{target_profile_url OR prompt}
         try:
             print(f"Interrogating: {input}")
             ci_response = clip.clip_interrogate(input)
             print(f"Interrogation response: {ci_response}")
             prompt_map = {
-                "user": ctx.author.name,
+                "user": user,
                 "diffuser_type": "sdxl_replicate",
                 "prompt":  ci_response
             }
             sdxl_response = diffusers.prompt_diffuser(prompt_map)
             print(f"Response: {sdxl_response}")
-            await ctx.send(" @" + ctx.author.name+ ": " + sdxl_response[0])
+            await ctx.send(" @" + user + ": " + sdxl_response[0])
             return sdxl_response
         except Exception as e:
             print(f"Error: {e}")
@@ -253,23 +288,17 @@ class TwitchBot(commands.Bot):
 
     @commands.command(name="emoji")
     async def emoji_command(self, ctx):
-        #Setting up intro variables
-        split = ctx.message.content.split(" ")
-        welcomee = split[1].strip("@")
-        users = await self.twitch_client.fetch_users(names=[welcomee])
-        if users:
-            user = users[0]
-            profile_image_url = user.profile_image
+        user, target, input = await self._process_input(ctx) # {user of the command}{target}{target_profile_url OR prompt}
 
-        print(f"{welcomee}'s profile image URL is: {profile_image_url}")
+        print(f"{user}'s prediction: {input}")
 
-        filename, image_bytes = utility.download_image(profile_image_url, "temp/profile_images", f"{welcomee}.png")
+        filename, image_bytes = utility.download_image(profile_image_url, "temp/profile_images", f"{target}.png")
         try:
             await ctx.send(loading_emoji + " @" + ctx.author.name)
             ci_response = clip.clip_interrogate(filename)
             print(f"Interrogation response: {ci_response}")
             prompt_map = {
-                "user": welcomee,
+                "user": user,
                 "diffuser_type": "sdxl_replicate",
                 "prompt":  ci_response
             }
@@ -289,27 +318,26 @@ class TwitchBot(commands.Bot):
 
         #Setting up intro variables
         split = ctx.message.content.split(" ")
-        welcomee = split[1].strip("@")
+        target = split[1].strip("@")
         try:
             await ctx.send(" @" + ctx.author.name+ ": welcome to the crew! You look just like " + response)
-            await diffusers.text_to_image(welcomee, response)
+            await diffusers.text_to_image(target, response)
         except Exception as e:
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
 
     @commands.command(name="interrogate")
     async def interrogate_command(self, ctx):
-        print(f"Received command: {ctx.message.content}")
-        #Setting up intro variables
-        split = ctx.message.content.split(" ")
-        input = split[1:][0]
+        user, target, input = await self._process_input(ctx) # {user of the command}{target}{target_profile_url OR prompt}
+        print(f"Interrogating: {input} for {user}")
         try:
-            await ctx.send(loading_emoji + " @" + ctx.author.name)
+
+            await ctx.send(utility.computing(user))
             print(f"Interrogating: {input}")
             response = clip.clip_interrogate(input)
             print(f"Interrogation response: {response}")
             
-            await ctx.send(" @" + ctx.author.name+ "really looks like... " + response)
+            await ctx.send(" @" + user + "really looks like... " + response)
             return response
         except Exception as e:
             print(f"Error: {e}")

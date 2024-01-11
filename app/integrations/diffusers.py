@@ -43,6 +43,8 @@ if not os.getenv("DEFAULT_DIFFUSER_TYPE"):
 
 SDXL_ENDPOINT_NAME = os.environ.get("SDXL_ENDPOINT_NAME", "endpoint-name-not-set")
 DEFAULT_DIFFUSER_TYPE = os.environ.get("DEFAULT_DIFFUSER_TYPE", "default-not-set")
+REPLICATE_ORG = os.environ.get("REPLICATE_ORG", "default-not-set") # "ducktapedevops"
+AWS_REGION_NAME = os.environ.get("AWS_REGION_NAME", "default-not-set") # "us-east-1"
 
 sess = sagemaker.Session()
 
@@ -53,8 +55,8 @@ sdxl_model_predictor = Predictor(
             deserializer=BytesDeserializer()
         )
 
-sdxl_deployment = replicate.deployments.get("nonpareilnic/sdxl")
-background_removal_deployment = replicate.deployments.get("ducktapedevops/background-removal")
+sdxl_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/sdxl")
+background_removal_deployment = replicate.deployments.get("{REPLICATE_ORG}/background-removal")
 
 
 def get_predictor(diffuser_type):

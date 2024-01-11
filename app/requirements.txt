@@ -7,11 +7,6 @@ IPython
 python-dotenv
 langchain-experimental
 pillow
-open_clip_torch
-torch
-matplotlib
-gradio
-clip-interrogator
 jinja2
 replicate
 sqlalchemy
