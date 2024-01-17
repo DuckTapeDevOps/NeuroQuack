@@ -34,18 +34,3 @@ def computing(user: str, emoji="duckta12Type"):
     """Computing
     """
     return f" {emoji} @{user}"
-
-def input_map(ctx):
-    print(f"Received command: {ctx.message.content}")
-    try:
-        user = ctx.author.name
-        split = ctx.message.content.split(" ")
-        command = split[1]
-        return {
-            "user": user,
-            "command": command,
-            "input": ctx.message.content.replace(f"{command} ", "").replace(f"{user}", "")
-        }
-    except Exception as e:
-        print(f"Error parsing command: {e}")
-        return None
