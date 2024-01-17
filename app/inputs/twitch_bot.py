@@ -4,7 +4,7 @@ import os
 from twitchio.ext import commands
 from twitchio import Client
 from fastapi import HTTPException
-from tasks import diffusers, clip
+from tasks import diffusers, clip, text_generation
 from utility import computing, download_image
 # from utility.cost import analysis, prediction
 
@@ -22,10 +22,6 @@ llm_text = "In order to use an llm, you must choose a model and an inferencing m
 loading_emoji = "duckta12NeuroQuack"
 discord_invite = "https://discord.gg/4D5qzdEh"
 github_url = "https://github.com/DuckTapeDevOps"
-# TTS
-pronunciation = {
-    "k8s" : "kates",
-}
 
 
 
@@ -111,19 +107,7 @@ class TwitchBot(commands.Bot):
                 return user, command, target, profile_image_url
 
         return user, command, bot_name, prompt
-            
-    async def handle_first_interaction(self, user):
-        current_time = datetime.now()
-        last_interaction = self.user_interactions.get(user.name)
-        print(f"Last interaction: {last_interaction}")
 
-        if not last_interaction or last_interaction.date() < current_time.date():
-            # This is the first interaction of the day
-            print(f"First interaction of the day for {user.name}")
-            # Perform your desired action here
-
-            # Update the record
-            self.user_interactions[user.name] = current_time
 
     @commands.command(name="help")
     async def help_command(self, ctx):
@@ -156,7 +140,17 @@ class TwitchBot(commands.Bot):
         print(f"Command: {command}")
         print(f"Target: {target}")
         print(f"Input: {prompt}")
-    
+        try:
+            answer = await text_generation.text_generation(prompt)
+            answer = answer.lstrip()
+            max_length = 450 - len(ctx.author.name) - 4 # 4 for " @: "
+            if len(answer) > max_length:
+                answer = answer[:max_length] + ".."
+            await ctx.send(f"@{user} {answer}")
+        except Exception as e:
+            print(f"Error: {e}")
+            await ctx.send(f"Error: {e}")
+
     @commands.command(name="diffuse-sdxl")
     async def diffuse_sdxl_command(self, ctx):
         user, command, target, prompt = await self._process_input(ctx)
@@ -176,7 +170,7 @@ class TwitchBot(commands.Bot):
         print(f"User: {user}")
         print(f"Target: {target}")
         print(f"Input: {prompt}")
-        response = diffusers.background_removal(prompt)
+        response = await diffusers.background_removal(prompt)
         await ctx.send(" @" + user + " generated this image: " + response[0])
 
 
@@ -187,7 +181,7 @@ class TwitchBot(commands.Bot):
         print(f"User: {user}")
         print(f"Target: {target}")
         print(f"Input: {prompt}")
-        response = diffusers.emoji_diffuser(prompt)
+        response = await diffusers.emoji_diffuser(prompt)
         await ctx.send(" @" + user + " generated this image: " + response[0])
 
 
