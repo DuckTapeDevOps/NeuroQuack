@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 import replicate
 
-
 if not os.getenv("REPLICATE_ORG"):
     load_dotenv()
 

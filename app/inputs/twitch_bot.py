@@ -164,7 +164,7 @@ class TwitchBot(commands.Bot):
             ci_response = await clip.clip_interrogate(pp)
             print(f"Interrogation response: {ci_response}")
             diffuser_response = await diffusers.text_to_image_replicate(ci_response)
-            await ctx.send(" @" + target + " generated this image: " + diffuser_response[0])
+            await ctx.send("@" + user + " generated this image: " + diffuser_response[0])
         except Exception as e:
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
@@ -178,7 +178,7 @@ class TwitchBot(commands.Bot):
             response = await clip.clip_interrogate(pp)
             print(f"Interrogation response: {response}")
             
-            await ctx.send(" @" + target + " - " + response)
+            await ctx.send(" @" + user + " - " + response)
             return response
         except Exception as e:
             print(f"Error: {e}")

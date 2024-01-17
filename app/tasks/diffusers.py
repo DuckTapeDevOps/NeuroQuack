@@ -2,20 +2,15 @@ import os
 from dotenv import load_dotenv
 import replicate
 
-
-
 if not os.getenv("REPLICATE_ORG"):
     load_dotenv()
 
 REPLICATE_ORG = os.environ.get("REPLICATE_ORG", "default-not-set") # "ducktapedevops"
 
-
 sdxl_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/sdxl")
 background_removal_deployment = replicate.deployments.get("{REPLICATE_ORG}/background-removal")
 emoji_deployment = replicate.deployments.get("{REPLICATE_ORG}/emoji")
 bg_rm_deployment = replicate.deployments.get("{REPLICATE_ORG}/bg-rm")
-
-
 
 async def background_removal(img_url):
     prediction = await background_removal_deployment.predictions.async_create(
