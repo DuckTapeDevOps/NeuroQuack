@@ -1,6 +1,47 @@
+import json
+import os
 import replicate
+import boto3
+import sagemaker
+
+sess = sagemaker.Session()
+
+CLIP_ENDPOINT_NAME = os.environ.get("CLIP_ENDPOINT_NAME", "endpoint-name-not-set")
 
 ci_deployment = replicate.deployments.get("ducktapedevops/image-to-prompt")
+
+
+smr = boto3.client('sagemaker-runtime')
+
+# response = client.invoke_endpoint(
+#     EndpointName='string',
+#     Body=b'bytes'|file,
+#     ContentType='string',
+#     Accept='string',
+#     CustomAttributes='string',
+#     TargetModel='string',
+#     TargetVariant='string',
+#     TargetContainerHostname='string',
+#     InferenceId='string',
+#     EnableExplanations='string',
+#     InferenceComponentName='string'
+# )
+
+
+
+def image_to_caption(image_path: str):
+    response = smr.invoke_endpoint_async(
+        EndpointName='string', # REQUIRED
+        ContentType='string', # optional
+        Accept='string',    # optional
+        CustomAttributes='string', # optional
+        InferenceId='string', # optional
+        InputLocation='string', # REQUIRED
+        RequestTTLSeconds=123, # optional
+        InvocationTimeoutSeconds=123 # optional
+    )
+    # caption = captioner(image_path)[0]['generated_text']
+    return caption
 
 def clip_interrogate_deployed(image_path: str):
     prediction = ci_deployment.predictions.create(

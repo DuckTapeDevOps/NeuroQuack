@@ -1,18 +1,27 @@
 bot_name  := "neuroquack"
-massdriver_artifact_id := env_var('ARTIFACT_ID')
 aws_region := env_var('AWS_DEFAULT_REGION')
 # Define the default BOT variable
 
 #PYTHON
 
-python-run:
+bashrc:
+	source ~/.bashrc
+	start_stream
+
+run: stop
 	cd app && uvicorn main:app --reload
 
+start: docker-build docker-run docker-logs-follow
+
+stop: docker-stop
+
+venv:
+	source .venv/bin/activate
 
 #DOCKER
 # Target to build Docker image
 docker-build:
-    cd app && docker build -f Dockerfile.local -t {{bot_name}}:latest .
+    cd app && docker build -t {{bot_name}}:latest .
 
 # Target to run Docker container
 docker-run:
@@ -45,11 +54,13 @@ docker-stop:
 
 #MASSDRIVER
 mass-push:
-	cd app && mass image push massdriver/{{bot_name}} -a {{massdriver_artifact_id}} -r {{aws_region}}
+	cd app && mass image push massdriver/{{bot_name}} -a {env_var('ARTIFACT_ID')} -r {{aws_region}}
 
 mass-publish:
 	cd tofu/massdriver && mass budle publish
-	
+
 find-process:
 	ss -lptn 'sport = :8000'
 	echo "kill -9 <PID>"
+
+rebuild: docker-stop docker-rm-container docker-rm-image docker-build docker-run docker-logs-follow

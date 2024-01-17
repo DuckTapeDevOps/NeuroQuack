@@ -15,27 +15,11 @@ from sagemaker.deserializers import BytesDeserializer
 import sagemaker
 from PIL import Image
 from dotenv import load_dotenv
-from integrations import utility
+import utility
 import PIL
 import replicate
 import concurrent.futures
 
-# async def txt2img(message, prompt, negative, stepMode, width, height):
-#     print('Generating image for ' + str(message.chat.id))
-
-#     def blocking_code():
-#         return replicate.run(
-#             "tstramer/midjourney-diffusion:436b051ebd8f68d23e83d22de5e198e0995357afef113768c20f0b6fcef23c8b",
-#             input={"prompt": "mdjrny-v4 " + prompt, "negative_prompt": negative, 
-#                    "num_inference_steps": stepMode*10, "width": width, "height": height}
-#         )
-
-#     with concurrent.futures.ThreadPoolExecutor() as executor:
-#         future = executor.submit(blocking_code)
-#         output = await loop.run_in_executor(None, future.result)
-
-#     print(output[0] + '\n')
-#     return await message.answer_photo(output[0])
 
 
 if not os.getenv("DEFAULT_DIFFUSER_TYPE"):
@@ -45,11 +29,13 @@ SDXL_ENDPOINT_NAME = os.environ.get("SDXL_ENDPOINT_NAME", "endpoint-name-not-set
 DEFAULT_DIFFUSER_TYPE = os.environ.get("DEFAULT_DIFFUSER_TYPE", "default-not-set")
 REPLICATE_ORG = os.environ.get("REPLICATE_ORG", "default-not-set") # "ducktapedevops"
 AWS_REGION_NAME = os.environ.get("AWS_REGION_NAME", "default-not-set") # "us-east-1"
+SDXL_TURBO_ENDPOINT_NAME = os.environ.get("SDXL_TURBO_ENDPOINT_NAME", "endpoint-name-not-set")
+
 
 sess = sagemaker.Session()
 
-sdxl_model_predictor = Predictor(
-            endpoint_name=SDXL_ENDPOINT_NAME, 
+sdxl_turbo_predictor = Predictor(
+            endpoint_name=SDXL_TURBO_ENDPOINT_NAME, 
             sagemaker_session=sess,
             serializer=JSONSerializer(),
             deserializer=BytesDeserializer()
@@ -57,27 +43,44 @@ sdxl_model_predictor = Predictor(
 
 sdxl_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/sdxl")
 background_removal_deployment = replicate.deployments.get("{REPLICATE_ORG}/background-removal")
+emoji_deployment = replicate.deployments.get("{REPLICATE_ORG}/emoji")
 
 
 def get_predictor(diffuser_type):
-    if diffuser_type == "sdxl":
-        return sdxl_model_predictor
+    # if diffuser_type == "sdxl":
+    #     return sdxl_model_predictor
+    if diffuser_type == "sdxl-turbo":
+        return sdxl_turbo_predictor
+    if diffuser_type == "sdxl_replicate":
+        return sdxl_deployment
     else:
-        return sdxl_model_predictor # default to sdxl
+        return sdxl_turbo_predictor # default to sdxl-turbo
 
-default_model_predictor = get_predictor(DEFAULT_DIFFUSER_TYPE)
+default_model_predictor = get_predictor(sdxl_deployment)
 
 diffuser_models = "sdxl"
 help_text = f"To use !diffuse, type !diffuse <model> <prompt>. For example, !diffuse sdxl explain my next step. The model can be  {diffuser_models}. The prompt can be any text you want to use to generate a response."
 
 def prompt_diffuser(prompt_map):
+    print(prompt_map)
     if prompt_map['diffuser_type'] == "help" or prompt_map['prompt'] == "help":
         return help_text
+    if prompt_map['diffuser_type'] == "emoji":
+        return emoji_diffuser(prompt_map['prompt'])
+    if prompt_map['diffuser_type'] == "sdxl-turbo":
+        return text_to_image(user= prompt_map['user'], prompt= prompt_map['prompt'], diffusion_model_predictor= get_predictor(prompt_map['sdxl-turbo']))
     if prompt_map['diffuser_type'] == "sdxl_replicate":
         return text_to_image_replicate(user= prompt_map['user'], prompt= prompt_map['prompt'])
     # return text_to_image_replicate(user= prompt_map['user'], prompt= prompt_map['prompt'])
     return text_to_image(user= prompt_map['user'], prompt= prompt_map['prompt'], diffusion_model_predictor= get_predictor(prompt_map['diffuser_type']))
 
+def emoji_diffuser(prompt):
+    prediction = emoji_deployment.predictions.create(
+        input={"prompt": prompt}
+    )
+    prediction.wait()
+    print(prediction.output)
+    return prediction.output
 
 def prompt_diffuser_image_to_image(prompt_map):
     if prompt_map['diffuser_type']  == "sdxl":
@@ -93,7 +96,7 @@ def prompt_diffuser_image_to_image(prompt_map):
                               prompt_map['user'], 
                               prompt_map['title']) # default to sdxl
 
-def text_to_image(user: str, prompt: str,diffusion_model_predictor: Predictor = sdxl_model_predictor ):
+def text_to_image(user: str, prompt: str,diffusion_model_predictor: Predictor = default_model_predictor ):
     # augmented_prompt = f"{user} as a {prompt}"   
     try:
         payload = {

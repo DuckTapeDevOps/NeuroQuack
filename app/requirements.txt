@@ -7,6 +7,8 @@ IPython
 python-dotenv
 langchain-experimental
 pillow
+diffusers
+torch
 jinja2
 replicate
 sqlalchemy

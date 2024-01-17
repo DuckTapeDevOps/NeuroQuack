@@ -1,5 +1,4 @@
 import os
-from integrations.inputs import twitch_bot
 import requests
 
 
@@ -23,6 +22,14 @@ def download_image(url, directory, filename):
         print("Failed to download image")
         return None, None
     
+
+def list_inference_endpoints():
+    """List all inference endpoints.
+    """
+    return [
+        "mistral",
+        "neural"
+    ]
 def computing(user: str, emoji="duckta12Type"):
     """Computing
     """
@@ -30,10 +37,15 @@ def computing(user: str, emoji="duckta12Type"):
 
 def input_map(ctx):
     print(f"Received command: {ctx.message.content}")
-    user = ctx.author.name
-    split = ctx.message.content.split(" ")
-    input = split[1:][0]
-    return {
-        "user": user,
-        "input": input
-    }
+    try:
+        user = ctx.author.name
+        split = ctx.message.content.split(" ")
+        command = split[1]
+        return {
+            "user": user,
+            "command": command,
+            "input": ctx.message.content.replace(f"{command} ", "").replace(f"{user}", "")
+        }
+    except Exception as e:
+        print(f"Error parsing command: {e}")
+        return None

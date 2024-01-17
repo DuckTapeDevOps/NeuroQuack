@@ -3,7 +3,7 @@ import os
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 import uvicorn
-from integrations.inputs import twitch_bot
+from inputs import twitch_bot
 
 # {
 #   "twitch_auth": {
