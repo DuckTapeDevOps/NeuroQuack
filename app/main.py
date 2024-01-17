@@ -1,5 +1,4 @@
 import logging
-import os
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 import uvicorn
@@ -8,15 +7,13 @@ from inputs import twitch_bot
 # {
 #   "twitch_auth": {
 #     "twitch_token": "{{TOKEN}}",
-#     "initial_channels": "DuckTapeDevOps, MatisseTec",
-#     "emojis": {
-#         "computing_emoji": "duckta12Type"
-#     }
+#     "initial_channels": "DuckTapeDevOps, MatisseTec"
+#      }
+# }
 
 class TwitchCredentials(BaseModel):
     twitch_token: str
     initial_channels: str
-    emojis: dict
 
 class AuthInfo(BaseModel):
     twitch_auth: TwitchCredentials

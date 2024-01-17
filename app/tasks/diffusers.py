@@ -4,14 +4,10 @@ import replicate
 
 
 
-if not os.getenv("DEFAULT_DIFFUSER_TYPE"):
+if not os.getenv("REPLICATE_ORG"):
     load_dotenv()
 
-SDXL_ENDPOINT_NAME = os.environ.get("SDXL_ENDPOINT_NAME", "endpoint-name-not-set")
-DEFAULT_DIFFUSER_TYPE = os.environ.get("DEFAULT_DIFFUSER_TYPE", "default-not-set")
 REPLICATE_ORG = os.environ.get("REPLICATE_ORG", "default-not-set") # "ducktapedevops"
-AWS_REGION_NAME = os.environ.get("AWS_REGION_NAME", "default-not-set") # "us-east-1"
-SDXL_TURBO_ENDPOINT_NAME = os.environ.get("SDXL_TURBO_ENDPOINT_NAME", "endpoint-name-not-set")
 
 
 sdxl_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/sdxl")
@@ -29,10 +25,10 @@ async def background_removal(img_url):
     print(prediction.output)
     return prediction.output
     
-async def text_to_image_replicate(user: str, prompt: str):
+async def text_to_image_replicate(prompt: str):
     prediction = await sdxl_deployment.predictions.async_create(
         input={"prompt": prompt}
     )
     prediction.wait()
-    print(prediction.output)
+    print(prediction.output) #['https://replicate.delivery/pbxt/n5KKU2ii1eXCRiMA0j8Go2WmocappYO70S1En7r5SDPKMwGJA/out-0.png']
     return prediction.output

@@ -5,7 +5,7 @@ from twitchio.ext import commands
 from twitchio import Client
 from fastapi import HTTPException
 from tasks import diffusers, clip, text_generation
-from utility import computing, download_image
+import utility
 # from utility.cost import analysis, prediction
 
 
@@ -27,7 +27,6 @@ github_url = "https://github.com/DuckTapeDevOps"
 
 
 bot = None
-emojis = None
 twitch_token = None
 def start_bot(body):
     '''
@@ -35,8 +34,7 @@ def start_bot(body):
     '''
     twitch_token = body.twitch_token
     initial_channels = body.initial_channels
-    global bot, emojis
-    emojis = body.emojis
+    global bot
     if bot is not None:
         raise HTTPException(status_code=400, detail="Stream already running")
 
@@ -44,7 +42,6 @@ def start_bot(body):
     asyncio.create_task(bot.start())
     print(f"Started Twitch Bot in channels {initial_channels}")
     
-    # bot.get_channel("ducktapedevops").send(f"Cost prediction: $1.00/hr")
     return {"status": "success"}
 
 async def stop_bot():
@@ -54,9 +51,6 @@ async def stop_bot():
     global bot
     if bot is None:
         raise HTTPException(status_code=400, detail="Stream not running")
-    # response = CostAnalysis.get_cost_analysis()
-    # print(f"Cost analysis: {response}")
-    # await bot.get_channel("neuroquack").send(f"Cost analysis: {response}")
     await bot.close()
     bot = None
 
@@ -97,7 +91,7 @@ class TwitchBot(commands.Bot):
         await ctx.send(loading_emoji)
         bot_name, command, prompt = ctx.message.content.split(" ", 2)
         user = ctx.author.name
-        if "@" in prompt:
+        if "@" is prompt[0]:
             target = prompt.strip("@")
             target_list = await self.twitch_client.fetch_users(names=[target])
             if target_list:
@@ -128,10 +122,6 @@ class TwitchBot(commands.Bot):
     @commands.command(name="ping")
     async def ping_command(self, ctx):
         await ctx.send(f"Pong! {ctx.author.name}")
-
-    @commands.command(name="llm")
-    async def llm_command(self, ctx):
-        await ctx.send(f"Try llm-neural or llm-mistral")
     
     @commands.command(name="llm-neural")
     async def llm_neural_command(self, ctx):
@@ -142,10 +132,7 @@ class TwitchBot(commands.Bot):
         print(f"Input: {prompt}")
         try:
             answer = await text_generation.text_generation(prompt)
-            answer = answer.lstrip()
-            max_length = 450 - len(ctx.author.name) - 4 # 4 for " @: "
-            if len(answer) > max_length:
-                answer = answer[:max_length] + ".."
+            answer = utility.sanitize_text(answer, 450)
             await ctx.send(f"@{user} {answer}")
         except Exception as e:
             print(f"Error: {e}")
@@ -158,32 +145,11 @@ class TwitchBot(commands.Bot):
         print(f"Target: {target}")
         print(f"Input: {prompt}")
         try:
-            response = await diffusers.text_to_image_replicate(user, prompt)
+            response = await diffusers.text_to_image_replicate(prompt)
             await ctx.send(" @" + user + " generated this image: " + response[0])
         except Exception as e:
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
-
-    @commands.command(name="remove-bg")
-    async def remove_bg_command(self, ctx):
-        user, command, target, prompt = await self._process_input(ctx)
-        print(f"User: {user}")
-        print(f"Target: {target}")
-        print(f"Input: {prompt}")
-        response = await diffusers.background_removal(prompt)
-        await ctx.send(" @" + user + " generated this image: " + response[0])
-
-
-    
-    @commands.command(name="emoji")
-    async def emoji_command(self, ctx):
-        user, command, target, prompt = await self._process_input(ctx)
-        print(f"User: {user}")
-        print(f"Target: {target}")
-        print(f"Input: {prompt}")
-        response = await diffusers.emoji_diffuser(prompt)
-        await ctx.send(" @" + user + " generated this image: " + response[0])
-
 
     @commands.command(name="replicate")
     async def replicate_command(self, ctx):
@@ -195,15 +161,13 @@ class TwitchBot(commands.Bot):
         user, command, target, pp = await self._process_input(ctx) # {user of the command}{target}{target_profile_url OR prompt}
         try:
             print(f"Interrogating: {pp}")
-            ci_response = await clip.clip_interrogate_temp(pp)
+            ci_response = await clip.clip_interrogate(pp)
             print(f"Interrogation response: {ci_response}")
-            diffuser_response = await diffusers.text_to_image_replicate(user, ci_response)
-            await ctx.send(" @" + user + " generated this image: " + diffuser_response[0])
+            diffuser_response = await diffusers.text_to_image_replicate(ci_response)
+            await ctx.send(" @" + target + " generated this image: " + diffuser_response[0])
         except Exception as e:
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
-
-
 
     @commands.command(name="interrogate")
     async def interrogate_command(self, ctx):
@@ -211,10 +175,10 @@ class TwitchBot(commands.Bot):
         print(f"Interrogating: {input} for {user}")
         try:
             print(f"Interrogating: {input}")
-            response = await clip.clip_interrogate_temp(pp)
+            response = await clip.clip_interrogate(pp)
             print(f"Interrogation response: {response}")
             
-            await ctx.send(" @" + user + " - " + response)
+            await ctx.send(" @" + target + " - " + response)
             return response
         except Exception as e:
             print(f"Error: {e}")
@@ -229,3 +193,20 @@ class TwitchBot(commands.Bot):
     async def pp_command(self, ctx):
         user, command, target, pp = await self._process_input(ctx)
         await ctx.send(pp)
+
+    @commands.command(name="test-yo-self")
+    async def test_yo_self_command(self, ctx):
+        user, command, target, pp = await self._process_input(ctx)
+        print(f"PP: {pp}")
+        print(f"Target: {target}")
+        print(f"User: {user}")
+        print(f"Command: {command}")
+        await ctx.send(pp)
+        prompt = await clip.clip_interrogate(pp)
+        print(f"Prompt: {prompt}")
+        await ctx.send(prompt)
+        image_url = await diffusers.text_to_image_replicate(prompt)
+        print(f"Image URL: {image_url}")
+        await ctx.send(image_url)
+        chat_reply = utility.sanitize_text(await text_generation.text_generation(f"Tell a story about {target} {prompt}"), 450)
+        await ctx.send(chat_reply)
