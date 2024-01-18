@@ -1,9 +1,15 @@
 import logging
-import os
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 import uvicorn
-from integrations import twitch
+from inputs import twitch_bot
+
+# {
+#   "twitch_auth": {
+#     "twitch_token": "{{TOKEN}}",
+#     "initial_channels": "DuckTapeDevOps, MatisseTec"
+#      }
+# }
 
 class TwitchCredentials(BaseModel):
     twitch_token: str
@@ -20,13 +26,13 @@ app = FastAPI()
 
 @app.post("/start_bot")
 async def start_bot(body: AuthInfo):
-    twitch.start_bot(body.twitch_auth)
+    twitch_bot.start_bot(body.twitch_auth)
     print("Started Twitch Bot")
     return {"status": "success"}
 
 @app.post("/stop_bot")
 async def stop_bot():
-    await twitch.stop_bot()
+    await twitch_bot.stop_bot()
     return {"status": "success"}
 
 if __name__ == "__main__":

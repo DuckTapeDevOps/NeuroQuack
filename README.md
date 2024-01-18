@@ -1,3 +1,6 @@
+# DO NOT TRUST THIS README. I'LL FIX IT. COME TO [DuckTapeDevOps](https://twitch.tv/ducktapedevops)
+
+
 # NeuroQuack
 
 NeuroQuack is an innovative platform combining the power of conversational AI and advanced image synthesis to create a unique interactive experience. It allows users to upload images and engage with an AI to transform those images into personalized caricatures. Dive into a generative world where every conversation with the AI leads to a new visual discovery.
