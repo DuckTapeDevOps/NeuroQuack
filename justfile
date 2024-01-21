@@ -8,15 +8,12 @@ bashrc:
 	source ~/.bashrc
 	start_stream
 
-run: stop
+run:
 	cd app && uvicorn main:app --reload
 
 start: docker-build docker-run docker-logs-follow
 
 stop: docker-stop
-
-venv:
-	source .venv/bin/activate
 
 #DOCKER
 # Target to build Docker image
