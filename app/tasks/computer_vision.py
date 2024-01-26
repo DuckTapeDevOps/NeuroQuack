@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 import replicate
-from outputs import twitch_chat
 
 
 if not os.getenv("REPLICATE_ORG"):

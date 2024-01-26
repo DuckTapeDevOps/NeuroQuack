@@ -11,11 +11,11 @@ REPLICATE_ORG = os.environ.get("REPLICATE_ORG", "default-not-set") # "ducktapede
 stylizer_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/stylizer")
 animate_diff_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/animate-diff")
 
-async def pp_to_video(pp):
+async def url_to_video(image_url):
     output = await replicate.async_run( # Run runs it against an actively deployed model vs create creating a job/task
         "stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438",
         input={
-            "input_image": pp
+            "input_image": image_url
         }
     )
     print(output)
@@ -43,7 +43,7 @@ async def stylizer(img_url):
         input={
             "input": img_url,
             "generate_video": True,
-            "video_format": "gif"
+            "video_format": "mp4"
         }
     )
     prediction.wait()

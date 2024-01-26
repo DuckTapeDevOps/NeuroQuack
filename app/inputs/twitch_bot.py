@@ -9,7 +9,6 @@ import utility
 from flavor import styles
 # from utility.cost import analysis, prediction
 
-
 from pydantic import BaseModel
 from typing import Optional
 
@@ -18,13 +17,12 @@ BOT_NAME = os.environ.get("BOT_NAME", "not-set")
 help_text = "duckta12Lul"
 llm_text = "In order to use an llm, you must choose a model and an inferencing method. For example, !llm sdxl foo looking like bar"
 sup_text = "style, llm-neural, sdxl, replicate, photo-maker, emote, emote-url, pp-video, animate-diff, clip, blip, github, discord, commands, ping, really?"
-style = "Photographic (Default)"
-
-
+default_style = "Photographic (Default)"
+goals_guy = "@SpirodonFL"
 
 loading_emoji = "duckta12Compute"
 
-discord_invite = "https://discord.com/invite/4SJfD3BC"
+discord_invite = "https://discord.gg/t5DVy7DdBP"
 github_url = "https://github.com/DuckTapeDevOps"
 
 
@@ -32,6 +30,7 @@ github_url = "https://github.com/DuckTapeDevOps"
 
 bot = None
 twitch_token = None
+current_style = default_style
 def start_bot(body):
     '''
     Starts the Twitch bot
@@ -130,7 +129,6 @@ class TwitchBot(commands.Bot):
 
         return user, command, url, prompt or "url, not pp"
 
-
     @commands.command(name="help")
     async def help_command(self, ctx):
         await ctx.send(help_text)
@@ -147,11 +145,14 @@ class TwitchBot(commands.Bot):
     async def discord_command(self, ctx):
         await ctx.send(f"Join the Discord! {discord_invite}")
 
+    @commands.command(name="goals")
+    async def goals_command(self, ctx):
+        await ctx.send(f"Goals: {goals_guy}")
+
     @commands.command(name="ping")
     async def ping_command(self, ctx):
         await ctx.send(f"Pong! {ctx.author.name}")
 
-    
     @commands.command(name="commands")
     async def commands_command(self, ctx):
         print(f"Received command: {ctx.message.content}")
@@ -167,15 +168,31 @@ class TwitchBot(commands.Bot):
         user, command, target, pp, prompt = await self._process_input(ctx)
         await ctx.send(pp)
 
+    @commands.command(name="resize-url")
+    async def resize_url_command(self, ctx):
+        user, command, url, width, height = ctx.message.content.split(" ", 4)
+        width = int(width)
+        height = int(height)
+        print(f"Received command: {ctx.message.content}")
+        print(f"Width: {width}")
+        print(f"Height: {height}")
+        try:
+            response = await utility.resize_image(url, width, height)
+            await ctx.send(file=response)
+        except Exception as e:
+            print(f"Error: {e}")
+            await ctx.send(f"Error: {e}")
+
     @commands.command(name="get-style")
     async def get_style_command(self, ctx):
-        await ctx.send(style)
+        await ctx.send({current_style})
 
 
     @commands.command(name="set-style")
     async def style_command(self, ctx):
+        print(f"Received command: {ctx.message.content}")
         style = ctx.message.content.split(" ", 1)[1]
-        await ctx.send(f"switched to {style}")
+        await ctx.send(f"thid dont work, fam")
 
     @commands.command(name="list-styles")
     async def styles_command(self, ctx):
@@ -188,7 +205,7 @@ class TwitchBot(commands.Bot):
 
     @commands.command(name="llm-neural")
     async def llm_neural_command(self, ctx):
-        user, command, target, prompt = await self._process_input(ctx) # {user of the command}{target}{target_profile_url OR prompt}
+        user, command, target, prompt, pp = await self._process_input(ctx) # {user of the command}{target}{target_profile_url OR prompt}
         print(f"User: {user}")
         print(f"Command: {command}")
         print(f"Target: {target}")
@@ -238,28 +255,31 @@ class TwitchBot(commands.Bot):
                 await ctx.send(f"Error: {e}")
 
 
-    @commands.command(name="photo-maker-pp")
+    @commands.command(name="pp-photomaker")
     async def photo_maker_command(self, ctx):
         user, command, target, pp, prompt = await self._process_input(ctx)
         print(f"PP: {pp}")
         print(f"Target: {target}")
         print(f"User: {user}")
         print(f"Command: {command}")
+        if prompt is None:
+            prompt = "img"
         try:
-            output = await text_to_image.photomaker(pp, prompt, style)
+            output = await text_to_image.photomaker(pp, prompt)
             await ctx.send("@" + user + " generated this image: " + output[0])
         except Exception as e:
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
     
-    @commands.command(name="photo-maker-url")
+    @commands.command(name="url-photomaker")
     async def photo_maker_url_command(self, ctx):
+        print(f"Received command: {ctx.message.content}")
         user, command, url, prompt = await self._process_input_url(ctx)
         print(f"User: {user}")
         print(f"Command: {command}")
         print(f"Prompt: {prompt}")
         try:
-            output = await text_to_image.photomaker(url, prompt, style)
+            output = await text_to_image.photomaker(url, prompt)
             await ctx.send("@" + user + " generated this image: " + output[0])
         except Exception as e:
             print(f"Error: {e}")
@@ -272,11 +292,12 @@ class TwitchBot(commands.Bot):
         print(f"Target: {target}")
         print(f"User: {user}")
         print(f"Command: {command}")
+        style= "Photographic (Default)"
         try:
             caption = await image_to_text.blip(pp)
             caption = caption.split(":")[1].strip()  # Extract the text after "Caption:" and remove leading/trailing whitespaces
             prompt = caption + " " + prompt
-            image = await text_to_image.photomaker(pp, prompt, style)
+            image = await text_to_image.photomaker(pp, prompt)
             await ctx.send(f"@{user} '{prompt}' {image[0]}")
         except Exception as e:
             print(f"Error: {e}")
@@ -293,7 +314,7 @@ class TwitchBot(commands.Bot):
             caption = await image_to_text.blip(url)
             caption = caption.split(":")[1].strip()  # Extract the text after "Caption:" and remove leading/trailing whitespaces
             prompt = caption + " " + prompt
-            image = await text_to_image.photomaker(url, prompt, style)
+            image = await text_to_image.photomaker(url, prompt)
             await ctx.send(f"@{user} '{prompt}' {image[0]}")
         except Exception as e:
             print(f"Error: {e}")
@@ -334,8 +355,20 @@ class TwitchBot(commands.Bot):
         print(f"User: {user}")
         print(f"Command: {command}")
         try:
-            video_url = await video.pp_to_video(pp)
+            video_url = await video.url_to_video(pp)
             await ctx.send("@" + user + " generated this video: " + video_url)
+        except Exception as e:
+            print(f"Error: {e}")
+            await ctx.send(f"Error: {e}")
+    
+    @commands.command(name="url-video")
+    async def animate_command(self, ctx):
+        bot_name, command, url = ctx.message.content.split(" ", 2)
+        print(f"Command: {command}")
+        print(f"URL: {url}")
+        user = ctx.author.name
+        try:
+            await ctx.send("@" + user + " generated this video: " + await video.url_to_video(url))
         except Exception as e:
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
@@ -384,11 +417,14 @@ class TwitchBot(commands.Bot):
 
         welcome_prompt = f"This is {target}, tell the story of how he raided into DuckTapeDevOps' channel!"
         try:
-            welcome_story = await computer_vision.minigpt(welcome_prompt, pp)
-            await ctx.send(f"@{user} generated this text: {welcome_story}")
+            # welcome_story = await computer_vision.minigpt(welcome_prompt, pp)
+
+            asyncio.get_event_loop().run_until_complete(computer_vision.minigpt(prompt, pp))
+            await ctx.send(f"@{user} generated this text: {welcome_prompt}")
         except Exception as e:
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
+
             
     ######################
     ## IMAGE_TO_TEXT #####

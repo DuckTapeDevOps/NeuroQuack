@@ -1,4 +1,5 @@
-bot_name  := "neuroquack"
+bot_name  := "ducktronaut"
+port	  := "8080"
 aws_region := env_var('AWS_DEFAULT_REGION')
 # Define the default BOT variable
 
@@ -22,10 +23,10 @@ docker-build:
 
 # Target to run Docker container
 docker-run:
-    docker run -e REPLICATE_API_TOKEN -d -p 8000:8000 --name {{bot_name}} {{bot_name}}:latest 
+    docker run -e REPLICATE_API_TOKEN -d -p {{port}}:{{port}} --name {{bot_name}} {{bot_name}}:latest 
 
 docker-run-pull IMAGE:
-	docker run -e REPLICATE_API_TOKEN -d -p 8000:8000 --name {{bot_name}} {{IMAGE}}
+	docker run -e REPLICATE_API_TOKEN -d -p {{port}}:{{port}} --name {{bot_name}} {{IMAGE}}
 
 # Command to run both the above commands
 docker-rm F:
@@ -57,7 +58,7 @@ mass-publish:
 	cd tofu/massdriver && mass budle publish
 
 find-process:
-	ss -lptn 'sport = :8000'
+	ss -lptn 'sport = :{{port}}'
 	echo "kill -9 <PID>"
 
-rebuild: docker-stop docker-rm-container docker-rm-image docker-build docker-run docker-logs-follow
+rebuild: docker-stop docker-rm-container docker-build docker-run docker-logs-follow
