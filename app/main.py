@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 import uvicorn
 from inputs import twitch_bot
 
+
 # {
 #   "twitch_auth": {
 #     "twitch_token": "{{TOKEN}}",

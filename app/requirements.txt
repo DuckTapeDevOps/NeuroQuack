@@ -7,3 +7,4 @@ Requests==2.31.0
 rich==13.7.0
 twitchio==2.8.2
 uvicorn==0.15.0
+pillow
