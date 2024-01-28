@@ -12,7 +12,7 @@ bashrc:
 run:
 	cd app && uvicorn main:app --reload
 
-start: docker-build docker-run docker-logs-follow
+start: docker-build docker-run docker-follow
 
 stop: docker-stop
 
@@ -44,7 +44,7 @@ docker-rm-image:
 docker-logs:
 	docker logs {{bot_name}}
 
-docker-logs-follow:
+docker-follow:
 	docker logs -f {{bot_name}}
 
 docker-stop:
@@ -52,13 +52,13 @@ docker-stop:
 
 #MASSDRIVER
 mass-push:
-	cd app && mass image push massdriver/{{bot_name}} -a {env_var('ARTIFACT_ID')} -r {{aws_region}}
+	cd app && mass image push massdriver/{{bot_name}} -a {{env_var('ARTIFACT_ID')}} -r {{aws_region}}
 
 mass-publish:
 	cd tofu/massdriver && mass budle publish
 
-find-process:
-	ss -lptn 'sport = :{{port}}'
+find-process PORT:
+	ss -lptn 'sport = :{{PORT}}'
 	echo "kill -9 <PID>"
 
-rebuild: docker-stop docker-rm-container docker-build docker-run docker-logs-follow
+rebuild: docker-stop docker-rm-container docker-build docker-run docker-follow

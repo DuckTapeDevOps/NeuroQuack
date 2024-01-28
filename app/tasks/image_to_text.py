@@ -9,7 +9,7 @@ CLIP_ENDPOINT_NAME = os.environ.get("CLIP_ENDPOINT_NAME", "endpoint-name-not-set
 REPLICATE_ORG = os.environ.get("REPLICATE_ORG", "default-not-set") # "ducktapedevops"
 blip_deployment = replicate.deployments.get("ducktapedevops/blip")
 
-async def clip_interrogate(image_path: str):
+async def clip(image_path: str):
     output = await replicate.async_run(
         CLIP_ENDPOINT_NAME,
         input={

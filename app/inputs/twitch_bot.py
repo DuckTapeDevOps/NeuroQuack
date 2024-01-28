@@ -26,8 +26,6 @@ discord_invite = "https://discord.gg/t5DVy7DdBP"
 github_url = "https://github.com/DuckTapeDevOps"
 
 
-
-
 bot = None
 twitch_token = None
 current_style = default_style
@@ -37,10 +35,10 @@ def start_bot(body):
     '''
     twitch_token = body.twitch_token
     initial_channels = body.initial_channels
+    
     global bot
     if bot is not None:
         raise HTTPException(status_code=400, detail="Stream already running")
-
     bot = TwitchBot(twitch_token, initial_channels.split(","))
     asyncio.create_task(bot.start())
     print(f"Started Twitch Bot in channels {initial_channels}")
@@ -79,6 +77,39 @@ class TwitchBot(commands.Bot):
             else:
                 raise e
 
+    async def _get_profile_image_url(self, target):
+        """
+        Fetches the profile image URL for the given user.
+        !
+
+        Args:
+            user: The user to fetch the profile image URL for.
+
+        Returns:
+            The profile image URL for the given user.
+        """
+        profile_image_url = None
+        print(f"Fetching profile image for {target}")
+        # Fetch the user info from Twitch API.
+        # If the user is not found, return None.
+        # If the user is found, return the profile image URL.
+        # If the user is found, but the profile image is not set, return None.
+        # If the user is found, but the profile image is set, return the profile image URL.
+        # If the user is found, but the profile image is set, but the URL is invalid, return None.
+        # If the user is found, but the profile image is set, but the URL is valid, return the profile image URL.
+        # If the user is found, but the profile image is set, but the URL is valid, return the profile image URL.
+        # If the user is found, but the profile image is set, but the URL is valid, return the profile image URL.
+        # If the user is found, but the profile image is set, but the URL is valid, return the profile image URL.
+        print(f"Fetching user info for {target}")
+        target = target.strip("@")
+        target_list = await self.twitch_client.fetch_users(names=[target])
+        if target_list:
+            target_info = target_list[0]
+            print(f"User info: {target_info}")
+            profile_image_url = target_info.profile_image
+            print(f"profile_image: {profile_image_url}")
+        return profile_image_url
+
     async def _process_input(self, ctx): # First step in processing a command
         """
         Processes the input and fetches profile image URL if needed.
@@ -101,12 +132,8 @@ class TwitchBot(commands.Bot):
                 target = prompt
                 rest_of_prompt = ""
             target = target.strip("@")
-            target_list = await self.twitch_client.fetch_users(names=[target])
-            if target_list:
-                target_info = target_list[0]
-                profile_image_url = target_info.profile_image
-                print(f"profile_image: {profile_image_url}")
-                return user, command, target, profile_image_url, rest_of_prompt
+            profile_image_url = await self._get_profile_image_url(target)
+            return user, command, target, profile_image_url, rest_of_prompt
 
         return user, command, bot_name, prompt, "url, not pp"
     
@@ -237,22 +264,22 @@ class TwitchBot(commands.Bot):
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
 
-        @commands.command(name="replicate")
-        async def replicate_command(self, ctx):
-            """
-            !replicate help
-            Replicate takes in a url and returns a new image based on that image's interrogation response
-            """
-            user, command, target, pp, prompt = await self._process_input(ctx) # {user of the command}{target}{target_profile_url OR prompt}
-            try:
-                print(f"Interrogating: {pp}")
-                ci_response = await image_to_text.clip_interrogate(pp)
-                print(f"Interrogation response: {ci_response}")
-                diffuser_response = await text_to_image.text_to_image_replicate(ci_response)
-                await ctx.send("@" + user + " generated this image: " + diffuser_response[0])
-            except Exception as e:
-                print(f"Error: {e}")
-                await ctx.send(f"Error: {e}")
+    @commands.command(name="replicate")
+    async def replicate_command(self, ctx):
+        """
+        !replicate help
+        Replicate takes in a url and returns a new image based on that image's interrogation response
+        """
+        user, command, target, pp, prompt = await self._process_input(ctx) # {user of the command}{target}{target_profile_url OR prompt}
+        try:
+            print(f"Interrogating: {pp}")
+            ci_response = await image_to_text.clip(pp)
+            print(f"Interrogation response: {ci_response}")
+            diffuser_response = await text_to_image.text_to_image_replicate(ci_response)
+            await ctx.send("@" + user + " generated this image: " + diffuser_response[0])
+        except Exception as e:
+            print(f"Error: {e}")
+            await ctx.send(f"Error: {e}")
 
 
     @commands.command(name="pp-photomaker")
@@ -319,6 +346,34 @@ class TwitchBot(commands.Bot):
         except Exception as e:
             print(f"Error: {e}")
             await ctx.send(f"Error: {e}")
+
+    @commands.command(name="this-is-fine")
+    async def this_is_fine_command(self, ctx):
+        user, command, target = ctx.message.content.split(" ", 3)
+        pp = await self._get_profile_image_url(target)
+        prompt = await image_to_text.blip(pp)
+        try:
+            output = await text_to_image.this_is_fine(pp, prompt)
+            await ctx.send("@" + user + " generated this image: " + output[0])
+        except Exception as e:
+            print(f"Error: {e}")
+            await ctx.send(f"Error: {e}")
+
+    @commands.command(name="qr-code")
+    async def qr_code_command(self, ctx):
+        await ctx.send(f"@{ctx.author.name} Generating QR Code... {loading_emoji}")
+        user, command, target, webpage = ctx.message.content.split(" ", 4)
+        pp = await self._get_profile_image_url(target)
+        prompt = await image_to_text.clip(pp)
+        try:
+            output = await text_to_image.qr_code(prompt, webpage)
+            for image in output:
+                await ctx.send(f"@{user} generated this image: {image}")
+        except Exception as e:
+            print(f"Error: {e}")
+            await ctx.send(f"Error: {e}")
+
+    
 
     ######################
             
@@ -435,7 +490,7 @@ class TwitchBot(commands.Bot):
         user, command, target, pp, prompt = await self._process_input(ctx) # {user of the command}{target}{target_profile_url OR prompt}
         try:
             print(f"Clipping: {user}")
-            response = await image_to_text.clip_interrogate(pp)
+            response = await image_to_text.clip(pp)
             print(f"Clip response: {response}")
             
             await ctx.send(" @" + user + " - " + response)
@@ -473,7 +528,7 @@ class TwitchBot(commands.Bot):
         print(f"User: {user}")
         print(f"Command: {command}")
         await ctx.send(pp)
-        prompt = await image_to_text.clip_interrogate(pp)
+        prompt = await image_to_text.clip(pp)
         print(f"Prompt: {prompt}")
         await ctx.send(prompt)
         image_url = await text_to_image.text_to_image_replicate(prompt)

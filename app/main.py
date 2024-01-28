@@ -18,6 +18,7 @@ class TwitchCredentials(BaseModel):
 
 class AuthInfo(BaseModel):
     twitch_auth: TwitchCredentials
+    replicate_token: str
 
 
 # Initialize logging
@@ -25,8 +26,17 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
 
+
+REPLICATE_API_TOKEN = None
+
+
 @app.post("/start_bot")
 async def start_bot(body: AuthInfo):
+    global REPLICATE_API_TOKEN
+    REPLICATE_API_TOKEN = body.replicate_token
+    print("Started Twitch Bot")
+    print(f"Initial Channels: {body.twitch_auth.initial_channels}")
+    print("Starting bot...")
     twitch_bot.start_bot(body.twitch_auth)
     print("Started Twitch Bot")
     return {"status": "success"}
