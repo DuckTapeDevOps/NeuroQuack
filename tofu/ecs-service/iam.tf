@@ -1,24 +1,14 @@
 resource "aws_iam_role" "execution_role" {
-  name               = "${var.md_metadata.name_prefix}-execution-role"
-#   assume_role_policy = data.aws_iam_policy_document.sagemaker_assume_role.json
+  name               = "${var.service_name}-execution-role"
+  assume_role_policy = data.aws_iam_policy_document.execution_role.json
 }
-
-# data "aws_iam_policy_document" "sagemaker_assume_role" {
-#   statement {
-#     actions = ["sts:AssumeRole"]
-#     principals {
-#       type        = "Service"
-#       identifiers = ["sagemaker.amazonaws.com"]
-#     }
-#   }
-# }
 
 data "aws_iam_policy_document" "execution_role" {
   statement {
     sid    = "CloudwatchLogsAccess"
     effect = "Allow"
     resources = [
-      "arn:aws:logs:${var.vpc.specs.aws.region}:${var.account_id}:log-group:/aws/**",
+      "arn:aws:logs:${var.region}:${var.account_id}:log-group:/aws/**",
       "*"
     ]
     actions = [
@@ -31,7 +21,7 @@ data "aws_iam_policy_document" "execution_role" {
   statement {
     sid    = "CloudwatchMetricsAccess"
     effect = "Allow"
-    resources = ["arn:aws:logs:${var.vpc.specs.aws.region}:${var.account_id}:log-group:/aws/*",
+    resources = ["arn:aws:logs:${var.region}:${var.account_id}:log-group:/aws/*",
     "*"]
     actions = [
       "cloudwatch:PutMetricData"
@@ -56,10 +46,17 @@ data "aws_iam_policy_document" "execution_role" {
       "ecr:GetRepositoryPolicy"
     ]
   }
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["ecs-tasks.amazonaws.com"]
+    }
+  }
 }
 
 resource "aws_iam_policy" "execution_role" {
-  name   = "${var.md_metadata.name_prefix}-policy"
+  name   = "${var.service_name}-policy"
   policy = data.aws_iam_policy_document.execution_role.json
 }
 

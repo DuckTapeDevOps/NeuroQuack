@@ -23,8 +23,8 @@ variable "task_memory" {
   type        = number
 }
 
-variable "cluster_name" {
-  description = "The name of the cluster"
+variable "cluster_id" {
+  description = "The ID of the ECS cluster"
   type        = string
 }
 
@@ -46,4 +46,14 @@ variable "desired_count" {
 variable "container_env_vars" {
   description = "The environment variables of the container"
   type        = map(string)
+}
+
+variable "vpc_id" {
+  description = "The vpc id of the cluster's vpc"
+  type        = string
+}
+
+variable "api_gateway_subnet_ids" {
+  type        = list(string)
+  description = "The IDs of the API Gateway subnets."
 }
