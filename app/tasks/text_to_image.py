@@ -11,13 +11,13 @@ sdxl_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/sdxl")
 this_is_fine_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/this-is-fine")
 qr_code_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/3d-qr-code")
 
-async def photomaker(img_url, prompt, style: str = "Photographic (Default)"):
+async def photomaker(img_url, prompt, style: str = "Enhance"):
     if "img" not in prompt:
         prompt = f"{prompt} img"
     prediction = await replicate.async_run(
         "jd7h/photomaker:b28be690c8a87bcf62002ce5ba77ac534b38998b8c9aaa7ff81d6009db6744b0",
         input={
-            "seed": 1143488585,
+            "seed": 0,
             "prompt": f"{prompt}",
             "num_steps": 50,
             "style_name": style,
