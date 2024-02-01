@@ -53,7 +53,7 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "api_gateway_subnet_ids" {
+variable "subnet_ids" {
   type        = list(string)
   description = "The IDs of the API Gateway subnets."
 }

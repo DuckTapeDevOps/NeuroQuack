@@ -6,15 +6,13 @@ locals {
 
 module "ecs_cluster" {
   source = "./ecs-cluster"
-
+  subnet_ids = var.subnet_ids
   cluster_name = local.cluster_name
-
-  # Pass variables to the module
 }
 
 module "ecs_service" {
   source = "./ecs-service"
-  api_gateway_subnet_ids = var.subnet_ids
+  subnet_ids = var.subnet_ids
   cluster_id   = module.ecs_cluster.ecs_cluster_id
   service_name = local.service_name
   container_image = var.container_image
@@ -33,9 +31,10 @@ module "ecs_service" {
 
 module "api_gateway" {
   source = "./api-gateway"
-  api_gateway_subnet_ids = var.subnet_ids
+  subnet_ids = var.subnet_ids
   service_name = local.service_name
   account_id = data.aws_caller_identity.current.account_id
   api_gateway_name = "${var.project_name}-api-gw"
   region = data.aws_region.current.name
+  nlb_dns_name = module.ecs_cluster.nlb_dns_name
 }
