@@ -5,13 +5,13 @@ locals {
 }
 
 module "ecs_cluster" {
-  source = "./ecs-cluster"
+  source = "git::git@github.com:DuckTapeDevOps/tofu-aws-ecs-fargate-cluster.git"
   subnet_ids = var.subnet_ids
   cluster_name = local.cluster_name
 }
 
 module "ecs_service" {
-  source = "./ecs-service"
+  source = "git::git@github.com:DuckTapeDevOps/tofu-aws-ecs-fargate-service.git"
   subnet_ids = var.subnet_ids
   cluster_id   = module.ecs_cluster.ecs_cluster_id
   service_name = local.service_name
@@ -30,7 +30,7 @@ module "ecs_service" {
 }
 
 module "api_gateway" {
-  source = "./api-gateway"
+  source = "git::git@github.com:DuckTapeDevOps/tofu-aws-api-gateway.git"
   subnet_ids = var.subnet_ids
   service_name = local.service_name
   account_id = data.aws_caller_identity.current.account_id
