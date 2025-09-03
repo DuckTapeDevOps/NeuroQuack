@@ -1,81 +1,157 @@
-# DO NOT TRUST THIS README. I'LL FIX IT. COME TO [DuckTapeDevOps](https://twitch.tv/ducktapedevops)
-
-
 # NeuroQuack
 
-NeuroQuack is an innovative platform combining the power of conversational AI and advanced image synthesis to create a unique interactive experience. It allows users to upload images and engage with an AI to transform those images into personalized caricatures. Dive into a generative world where every conversation with the AI leads to a new visual discovery.
+NeuroQuack is an AI-powered Twitch bot that brings advanced image generation and analysis directly to your Twitch chat. Using Replicate's cutting-edge AI models, it enables streamers and viewers to create, transform, and analyze images through simple chat commands.
 
 ![Alt Text](./media/images/real-mvp.gif)
 
-MVP: Minimal Viable Product
-- Docker Container running locally for Twitch Bot with interaction with chat
-- Deployable to AWS
-- Walkthrough
+## What It Does
 
-FMVP: Finals MVP
-- Integration with a Large Language Model (LLM) for dynamic conversation flow.
-- Utilization of Stable Diffusion for real-time image generation based on LLM prompts.
-- AWS SageMaker for hosting and auto-scaling the LLM and Stable Diffusion models.
+NeuroQuack transforms your Twitch chat into an AI art studio where users can:
 
-## Tech Stack (Needs)
+- **Generate Images**: Create stunning visuals from text prompts using Stable Diffusion XL
+- **Personalize Content**: Transform profile pictures into custom artwork, emotes, and videos
+- **Analyze Images**: Get AI-powered descriptions and captions for any image
+- **Create Videos**: Generate animated content from static images
+- **Interactive AI**: Engage with language models for text generation
 
-![Alt Text](./media/images/surprise-whats-in-the-box.gif)
-The NeuroQuack tech stack is meticulously curated to provide a robust, scalable, and responsive user experience:
-- **Frontend**: Cybernetic-themed UI, empowering users to craft their own visual journey.
-- **AI**: Integration with a Large Language Model for engaging conversation and Stable Diffusion for dynamic image generation.
-- **Cloud Infrastructure**: AWS SageMaker for deploying models, and Amazon S3 for data storage, all seamlessly orchestrated using Massdriver to streamline our infrastructure as code, ensuring quick, reliable, and repeatable deployments.
-- **Networking**: Amazon Route53 for DNS management, providing a smooth and accessible user experience.
-- **Security and Compliance**: Leveraging AWS IAM for robust access control, safeguarding user data and interactions.
+## Features
 
-## Brain Dump (Wants)
+### 🎨 Image Generation
+- `@ducktronaut sdxl <prompt>` - Generate images using Stable Diffusion XL
+- `@ducktronaut pp-photomaker @username <prompt>` - Create personalized images using someone's profile picture
+- `@ducktronaut url-photomaker <image_url> <prompt>` - Generate images from custom URLs
+- `@ducktronaut emote @username <prompt>` - Create custom emotes from profile pictures
+- `@ducktronaut emote-url <image_url> <prompt>` - Create emotes from custom images
 
-![Alt Text](./media/images/ThisIsFine.jpeg)
+### 📄 Image Analysis
+- `@ducktronaut clip @username` - Get AI description of someone's profile picture
+- `@ducktronaut blip @username` - Generate captions for profile pictures
+- `@ducktronaut clip <image_url>` - Analyze any image URL
+- `@ducktronaut blip <image_url>` - Caption any image URL
 
-Future enhancements we're considering:
-- Enhanced UI/UX for the IPython Notebook to make it even more immersive.
-- Expanded LLM capabilities for richer conversations and more accurate prompt suggestions.
-- Advanced image editing features post Stable Diffusion processing.
-- Integration with additional AWS services for monitoring, logging, and automated deployment pipelines.
+### 🎬 Video Generation
+- `@ducktronaut pp-video @username <prompt>` - Create videos from profile pictures
+- `@ducktronaut animate-diff <prompt>` - Generate animated content
 
-# Walkthrough
-Your bot Access Token can be found at https://twitchtokengenerator.com
-1) Run `make docker_build`
-2) Run `make docker_run`
-3) To start the bot, use the following cURL:
-```
-curl --location 'http://localhost:4000/start_bot' \
---header 'Content-Type: application/json' \
---data '{"twitch_token": "<<YOUR_BOT_ACCESS_TOKEN>>", "initial_channels": "<<YOUR_CHANNEL_NAME>>"}'
-```
-4) In your Twitch chat, send `!hello` and you should receive `Hello {ctx.author.name}!` from your bot in the Twitch chat!
-5) To stop the bot, use the following cURL:
-```
-curl --location --request POST 'http://localhost:4000/stop_bot' \
+### 💬 Text Generation
+- `@ducktronaut llm-neural <prompt>` - Generate text using neural language models
+
+### 🛠️ Utility Commands
+- `@ducktronaut help` - Show available commands
+- `@ducktronaut commands` - List all commands
+- `@ducktronaut ping` - Test bot connectivity
+- `@ducktronaut set-style <style>` - Set image generation style
+- `@ducktronaut list-styles` - Show available styles
+- `@ducktronaut github` - Link to GitHub repository
+- `@ducktronaut discord` - Join Discord community
+
+## Tech Stack
+
+- **Backend**: FastAPI with Python
+- **Twitch Integration**: TwitchIO for chat connectivity
+- **AI Models**: Replicate for model inference
+- **Image Generation**: Stable Diffusion XL, PhotoMaker
+- **Image Analysis**: CLIP, BLIP
+- **Deployment**: Docker containers
+- **Cloud**: AWS (SageMaker, S3, Route53) with Massdriver
+
+## Quick Start
+
+### Prerequisites
+- Docker installed
+- Twitch bot token from [Twitch Token Generator](https://twitchtokengenerator.com)
+- Replicate API token
+
+### Setup
+1. Clone the repository
+2. Set your environment variables:
+   ```bash
+   export REPLICATE_API_TOKEN="your_replicate_token"
+   export REPLICATE_ORG="your_replicate_org"
+   ```
+
+3. Build and run with Docker:
+   ```bash
+   just docker-build
+   just docker-run
+   ```
+
+4. Start the bot:
+   ```bash
+   curl --location 'http://localhost:8080/start_bot' \
+   --header 'Content-Type: application/json' \
+   --data '{"twitch_token": "YOUR_BOT_TOKEN", "initial_channels": "YOUR_CHANNEL_NAME"}'
+   ```
+
+5. Test in your Twitch chat:
+   ```
+   @ducktronaut ping
+   @ducktronaut sdxl a beautiful sunset over mountains
+   @ducktronaut clip @yourusername
+   ```
+
+### Stop the Bot
+```bash
+curl --location --request POST 'http://localhost:8080/stop_bot' \
 --header 'Content-Type: application/json'
 ```
-6) Run `docker logs <<container_id>>` to see any logs from the running container locally
-7) Run `docker stop <<container_id>>`
 
+## Development
 
+### Local Development
+```bash
+cd app
+uvicorn main:app --reload
+```
 
+### Docker Commands
+```bash
+just docker-build    # Build Docker image
+just docker-run      # Run container
+just docker-logs     # View logs
+just docker-stop     # Stop container
+just rebuild         # Rebuild and restart
+```
 
+## Configuration
 
-## Backlog
+### Environment Variables
+- `REPLICATE_API_TOKEN` - Your Replicate API token
+- `REPLICATE_ORG` - Your Replicate organization name
+- `BOT_NAME` - Name of your Twitch bot (default: "ducktronaut")
 
-![Alt Text](./media/images/dumpsterfire-dumpster.gif)
+### Bot Configuration
+The bot uses the prefix `@<BOT_NAME>` for commands. For example, if your bot is named "ducktronaut", users would type:
+- `@ducktronaut sdxl a cat wearing a hat`
+- `@ducktronaut clip @username`
 
-Here's what we're tackling next:
-- Full mobile responsiveness for the IPython Notebook interface.
-- Improved error handling and user feedback for image uploads and generation.
-- Incorporation of user accounts and session management to save and retrieve past interactions.
-- Enhanced analytics to understand user engagement and model performance.
+## AI Models Used
 
+- **Stable Diffusion XL**: High-quality image generation
+- **PhotoMaker**: Personalized image creation
+- **CLIP**: Image understanding and description
+- **BLIP**: Image captioning
+- **Background Removal**: Clean image processing
+- **Video Generation**: Animated content creation
 
-## Working Examples:
-    - SDXL
-      - ECR: 763104351884.dkr.ecr.us-east-1.amazonaws.com/stabilityai-pytorch-inference:2.0.1-sgm0.1.0-gpu-py310-cu118-ubuntu20.04-sagemaker
-      - S3: s3://jumpstart-cache-prod-us-east-1/stabilityai-infer/prepack/v1.0.1/infer-prepack-model-imagegeneration-stabilityai-stable-diffusion-xl-base-1-0.tar.gz
-      - Instance Type: ml.g5.4xlarge
+## Contributing
 
-## Local Testing Commands:
-  `uvicorn main:app --reload` to run FastAPI locally and reload with changes for testing
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## Support
+
+- **Twitch**: [DuckTapeDevOps](https://twitch.tv/ducktapedevops)
+- **Discord**: [Join our community](https://discord.gg/t5DVy7DdBP)
+- **GitHub**: [DuckTapeDevOps](https://github.com/DuckTapeDevOps)
+
+## License
+
+See [LICENSE](LICENSE) file for details.
+
+---
+
+*Bring AI-powered creativity to your Twitch stream with NeuroQuack!* 🦆✨
