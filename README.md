@@ -1,138 +1,171 @@
 # NeuroQuack
 
-NeuroQuack is an AI-powered Twitch bot that brings advanced image generation and analysis directly to your Twitch chat. Using Replicate's cutting-edge AI models, it enables streamers and viewers to create, transform, and analyze images through simple chat commands.
-
-![Alt Text](./media/images/real-mvp.gif)
-
-## What It Does
-
-NeuroQuack transforms your Twitch chat into an AI art studio where users can:
-
-- **Generate Images**: Create stunning visuals from text prompts using Stable Diffusion XL
-- **Personalize Content**: Transform profile pictures into custom artwork, emotes, and videos
-- **Analyze Images**: Get AI-powered descriptions and captions for any image
-- **Create Videos**: Generate animated content from static images
-- **Interactive AI**: Engage with language models for text generation
+A flexible AI-powered API that acts as a hub between various input sources (Twitch, Discord, direct API) and AI services (Replicate, Bedrock, local models). Built with FastAPI and designed for easy deployment and scaling.
 
 ## Features
 
-### 🎨 Image Generation
-- `@ducktronaut sdxl <prompt>` - Generate images using Stable Diffusion XL
-- `@ducktronaut pp-photomaker @username <prompt>` - Create personalized images using someone's profile picture
-- `@ducktronaut url-photomaker <image_url> <prompt>` - Generate images from custom URLs
-- `@ducktronaut emote @username <prompt>` - Create custom emotes from profile pictures
-- `@ducktronaut emote-url <image_url> <prompt>` - Create emotes from custom images
+### Core API
+- **Image Analysis**: CLIP interrogation and BLIP captioning
+- **Image Generation**: SDXL text-to-image generation
+- **Image Editing**: PhotoMaker for image transformation
+- **Flexible Model Configuration**: Override models at API, environment, or app level
 
-### 📄 Image Analysis
-- `@ducktronaut clip @username` - Get AI description of someone's profile picture
-- `@ducktronaut blip @username` - Generate captions for profile pictures
-- `@ducktronaut clip <image_url>` - Analyze any image URL
-- `@ducktronaut blip <image_url>` - Caption any image URL
-
-### 🎬 Video Generation
-- `@ducktronaut pp-video @username <prompt>` - Create videos from profile pictures
-- `@ducktronaut animate-diff <prompt>` - Generate animated content
-
-### 💬 Text Generation
-- `@ducktronaut llm-neural <prompt>` - Generate text using neural language models
-
-### 🛠️ Utility Commands
-- `@ducktronaut help` - Show available commands
-- `@ducktronaut commands` - List all commands
-- `@ducktronaut ping` - Test bot connectivity
-- `@ducktronaut set-style <style>` - Set image generation style
-- `@ducktronaut list-styles` - Show available styles
-- `@ducktronaut github` - Link to GitHub repository
-- `@ducktronaut discord` - Join Discord community
-
-## Tech Stack
-
-- **Backend**: FastAPI with Python
-- **Twitch Integration**: TwitchIO for chat connectivity
-- **AI Models**: Replicate for model inference
-- **Image Generation**: Stable Diffusion XL, PhotoMaker
-- **Image Analysis**: CLIP, BLIP
-- **Deployment**: Docker containers
-- **Cloud**: AWS (SageMaker, S3, Route53) with Massdriver
+### Optional Integrations
+- **Twitch Bot**: Chat commands for image processing
+- **Discord Bot**: (Coming soon) Discord integration
+- **Direct API**: RESTful endpoints for programmatic access
 
 ## Quick Start
 
 ### Prerequisites
-- Docker installed
-- Twitch bot token from [Twitch Token Generator](https://twitchtokengenerator.com)
+- Python 3.11+
+- Docker (optional)
 - Replicate API token
 
-### Setup
-1. Clone the repository
-2. Set your environment variables:
+### Local Development
+
+1. **Clone and setup**:
    ```bash
-   export REPLICATE_API_TOKEN="your_replicate_token"
-   export REPLICATE_ORG="your_replicate_org"
+   git clone <repository>
+   cd NeuroQuack
+   just run
    ```
 
-3. Build and run with Docker:
+2. **Configure API**:
    ```bash
-   just docker-build
+   curl -X POST "http://localhost:8000/configure" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "api": {
+            "replicate_token": "your_token_here",
+            "replicate_org": "your_org_here"
+          }
+        }'
+   ```
+
+3. **Test image analysis**:
+   ```bash
+   curl -X POST "http://localhost:8000/image/analyze/clip" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "image_url": "https://example.com/image.jpg"
+        }'
+   ```
+
+4. **Generate image**:
+   ```bash
+   curl -X POST "http://localhost:8000/image/generate" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "prompt": "a beautiful landscape"
+        }'
+   ```
+
+### Docker Deployment
+
+1. **Build and run**:
+   ```bash
+   just rebuild
+   ```
+
+2. **Configure with environment variables**:
+   ```bash
+   export REPLICATE_API_TOKEN="your_token"
+   export REPLICATE_ORG="your_org"
    just docker-run
    ```
 
-4. Start the bot:
-   ```bash
-   curl --location 'http://localhost:8080/start_bot' \
-   --header 'Content-Type: application/json' \
-   --data '{"twitch_token": "YOUR_BOT_TOKEN", "initial_channels": "YOUR_CHANNEL_NAME"}'
-   ```
+## API Endpoints
 
-5. Test in your Twitch chat:
-   ```
-   @ducktronaut ping
-   @ducktronaut sdxl a beautiful sunset over mountains
-   @ducktronaut clip @yourusername
-   ```
+### Configuration
+- `POST /configure` - Configure API tokens and optional bot integrations
 
-### Stop the Bot
+### Image Processing
+- `POST /image/analyze/clip` - Analyze image with CLIP interrogator
+- `POST /image/analyze/blip` - Generate image caption with BLIP
+- `POST /image/generate` - Generate image from text prompt
+- `POST /image/photomaker` - Transform image using PhotoMaker
+
+### Bot Control
+- `POST /start_bot` - Start Twitch bot (if configured)
+- `POST /stop_bot` - Stop Twitch bot
+
+## Model Configuration
+
+The system supports hierarchical model configuration:
+
+1. **API Level** (highest priority): Specify model in API request
+2. **Environment Level**: Set `MODEL_*` environment variables
+3. **App Level** (lowest priority): Default models in `config/models.py`
+
+### Environment Variables
+
 ```bash
-curl --location --request POST 'http://localhost:8080/stop_bot' \
---header 'Content-Type: application/json'
+# Required
+REPLICATE_API_TOKEN=your_token
+REPLICATE_ORG=your_org
+
+# Optional model overrides
+MODEL_PHOTOMAKER=jd7h/photomaker:latest
+MODEL_CLIP_INTERROGATOR=pharmapsychotic/clip-interrogator:8151e1c9f47e696fa316146a2e35812ccf79cfc9eba05b11c7f450155102af70
+MODEL_SDXL=stability-ai/sdxl:7762fd07cf82c948538e41f63f77d685e02b063e37e496e96eefd46c929f9bdc
+MODEL_BLIP=ducktapedevops/blip
 ```
+
+## Architecture
+
+NeuroQuack follows a hub-and-spoke architecture pattern:
+
+**Input Sources** flow into the **NeuroQuack API** which then routes to **AI Services**:
+
+- **Input Sources**: Twitch Chat, Discord, Direct API calls
+- **NeuroQuack API**: FastAPI application with Pydantic models, Docker containerization
+- **AI Services**: Replicate models, AWS Bedrock, Local models
+
+The API acts as a central hub that can accept requests from multiple sources and route them to appropriate AI services based on the request type and configuration.
+
+**TODO**: Create a visual architecture diagram showing the hub-and-spoke pattern with input sources, the NeuroQuack API hub, and AI service destinations.
 
 ## Development
 
-### Local Development
+### Project Structure
+
+The application is organized into the following directories:
+
+- **app/config/** - Model configuration and settings
+- **app/inputs/** - Bot integrations (Twitch, Discord)
+- **app/models/** - Pydantic data models for API requests/responses
+- **app/routers/** - FastAPI route handlers for different endpoints
+- **app/tasks/** - AI service integrations and business logic
+- **app/flavor/** - Style configurations and templates
+- **app/main.py** - FastAPI application entry point
+
+### Adding New Models
+
+1. Add model to `config/models.py`
+2. Create task function in `tasks/`
+3. Add router endpoint in `routers/`
+4. Update environment variables if needed
+
+### Adding New Integrations
+
+1. Create integration in `inputs/`
+2. Add configuration model in `models/bot.py`
+3. Update `/configure` endpoint in `main.py`
+
+## Deployment
+
+### ECS/Fargate
+The application is designed to run on AWS ECS with:
+- Environment variable configuration
+- Health checks via `/configure` endpoint
+- Optional Twitch/Discord bot integration
+
+### Docker
 ```bash
-cd app
-uvicorn main:app --reload
+docker build -t neuroquack .
+docker run -e REPLICATE_API_TOKEN -e REPLICATE_ORG -p 8080:8080 neuroquack
 ```
-
-### Docker Commands
-```bash
-just docker-build    # Build Docker image
-just docker-run      # Run container
-just docker-logs     # View logs
-just docker-stop     # Stop container
-just rebuild         # Rebuild and restart
-```
-
-## Configuration
-
-### Environment Variables
-- `REPLICATE_API_TOKEN` - Your Replicate API token
-- `REPLICATE_ORG` - Your Replicate organization name
-- `BOT_NAME` - Name of your Twitch bot (default: "ducktronaut")
-
-### Bot Configuration
-The bot uses the prefix `@<BOT_NAME>` for commands. For example, if your bot is named "ducktronaut", users would type:
-- `@ducktronaut sdxl a cat wearing a hat`
-- `@ducktronaut clip @username`
-
-## AI Models Used
-
-- **Stable Diffusion XL**: High-quality image generation
-- **PhotoMaker**: Personalized image creation
-- **CLIP**: Image understanding and description
-- **BLIP**: Image captioning
-- **Background Removal**: Clean image processing
-- **Video Generation**: Animated content creation
 
 ## Contributing
 
@@ -142,16 +175,7 @@ The bot uses the prefix `@<BOT_NAME>` for commands. For example, if your bot is 
 4. Test thoroughly
 5. Submit a pull request
 
-## Support
-
-- **Twitch**: [DuckTapeDevOps](https://twitch.tv/ducktapedevops)
-- **Discord**: [Join our community](https://discord.gg/t5DVy7DdBP)
-- **GitHub**: [DuckTapeDevOps](https://github.com/DuckTapeDevOps)
-
 ## License
 
-See [LICENSE](LICENSE) file for details.
-
----
-
-*Bring AI-powered creativity to your Twitch stream with NeuroQuack!* 🦆✨
+[Your License Here]
+```

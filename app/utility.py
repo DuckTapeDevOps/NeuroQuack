@@ -13,10 +13,11 @@ def resize_image(image_data, width, height):
     # Open the image from the image_data object
     image = Image.open(io.BytesIO(image_data))
 
-    # Resize the image
-    resized_image = image.resize((width, height), Image.ANTIALIAS)
+    # Resize the image - use LANCZOS instead of deprecated ANTIALIAS
+    resized_image = image.resize((width, height), Image.Resampling.LANCZOS)
 
     # Save the resized image as a BytesIO object
     output_buffer = io.BytesIO()
     resized_image.save(output_buffer, format="PNG")
     output_buffer.seek(0)
+    return output_buffer.getvalue()

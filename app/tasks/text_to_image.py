@@ -1,29 +1,46 @@
 import os
 from dotenv import load_dotenv
 import replicate
+from config.models import get_model_version
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 if not os.getenv("REPLICATE_ORG"):
     load_dotenv()
 
 REPLICATE_ORG = os.environ.get("REPLICATE_ORG", "default-not-set") # "ducktapedevops"
 
-sdxl_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/sdxl")
-background_removal_deployment = replicate.deployments.get("{REPLICATE_ORG}/background-removal")
-emoji_deployment = replicate.deployments.get("{REPLICATE_ORG}/emoji")
-bg_rm_deployment = replicate.deployments.get("{REPLICATE_ORG}/bg-rm")
+# Keep other deployments for now, but we'll use public SDXL
+try:
+    background_removal_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/background-removal")
+    emoji_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/emoji")
+    bg_rm_deployment = replicate.deployments.get(f"{REPLICATE_ORG}/bg-rm")
+except Exception as e:
+    logger.warning(f"Some custom deployments not found: {e}")
+    background_removal_deployment = None
+    emoji_deployment = None
+    bg_rm_deployment = None
 
 async def background_removal(img_url):
+    if not background_removal_deployment:
+        raise Exception("Background removal deployment not available")
+    
     prediction = await background_removal_deployment.predictions.async_create(
         input={"file": img_url}
     )
     prediction.wait()
-    print(prediction.output)
+    logger.info(f"Background removal output: {prediction.output}")
     return prediction.output
 
-
 async def photomaker(img_url, prompt, style: str = "Photographic (Default)"):
+    actual_model = get_model_version("photomaker")
+    logger.info(f"Using PhotoMaker model: {actual_model}")
+    
     prediction = await replicate.async_run(
-        "jd7h/photomaker:b28be690c8a87bcf62002ce5ba77ac534b38998b8c9aaa7ff81d6009db6744b0",
+        actual_model,
         input={
             "seed": 1143488585,
             "prompt": f"{prompt}",
@@ -36,14 +53,18 @@ async def photomaker(img_url, prompt, style: str = "Photographic (Default)"):
             "style_strength_ratio": 20
         }
     )
-    print(prediction)
+    logger.info(f"PhotoMaker output: {prediction}")
     return prediction
 
+async def text_to_image_replicate(prompt: str, model: str = None):
+    # Use the provided model or fall back to default
+    actual_model = get_model_version("sdxl", model)
+    logger.info(f"Using SDXL model: {actual_model}")
     
-async def text_to_image_replicate(prompt: str):
-    prediction = await sdxl_deployment.predictions.async_create(
+    # Use public SDXL model instead of deployment
+    prediction = await replicate.async_run(
+        actual_model,
         input={"prompt": prompt}
     )
-    prediction.wait()
-    print(prediction.output) #['https://replicate.delivery/pbxt/n5KKU2ii1eXCRiMA0j8Go2WmocappYO70S1En7r5SDPKMwGJA/out-0.png']
-    return prediction.output
+    logger.info(f"SDXL output: {prediction}")
+    return prediction
