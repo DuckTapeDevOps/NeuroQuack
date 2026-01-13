@@ -1,0 +1,38 @@
+build:
+  gpu: true
+  system_packages:
+    - "libgl1-mesa-glx"
+    - "libglib2.0-0"
+    - "libsm6"
+    - "libxext6"
+    - "libxrender-dev"
+    - "ffmpeg"
+  python_version: "3.10"
+  python_packages:
+    - "torch==2.1.0"
+    - "torchvision==0.16.0"
+    - "torchaudio==2.1.0"
+    - "opencv-python-headless==4.8.0.76"
+    - "numpy>=1.21.0"
+    - "tqdm"
+    - "pillow>=9.0.0"
+    - "av"
+    - "einops"
+    - "omegaconf"
+    - "imageio"
+    - "imageio-ffmpeg"
+    - "gradio"
+    - "replicate"
+    - "cog"
+  run:
+    - "git clone https://github.com/Wan-Video/Wan2.2.git /src/Wan2.2"
+    - "cd /src/Wan2.2 && pip install -r requirements.txt"
+    - "mkdir -p /src/checkpoints"
+    - "wget https://huggingface.co/WanVideo/Wan2.2/resolve/main/checkpoints/wan2.2_animate_replace.ckpt -O /src/checkpoints/wan2.2_animate_replace.ckpt"
+
+predict: "predict.py:Predictor"
+
+environment:
+  PYTHONPATH: "/src/Wan2.2"
+
+devices: ["gpu"]
