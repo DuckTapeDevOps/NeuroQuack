@@ -1,64 +1,49 @@
-bot_name  := "ducktronaut"
-port	  := "8080"
-aws_region := env_var('AWS_DEFAULT_REGION')
-# Define the default BOT variable
+# Variables
+bot_name := "neuroquack"
+port := "8080"
 
-#PYTHON
+# Default target
+default:
+    @just --list
 
-bashrc:
-	source ~/.bashrc
-	start_stream
+# Build Docker image
+build:
+    docker build -t {{bot_name}}:latest app/
 
-run:
-	cd app && uvicorn main:app --reload
-
-start: docker-build docker-run docker-logs-follow
-
-stop: docker-stop
-
-#DOCKER
-# Target to build Docker image
-docker-build:
-    cd app && docker build -t {{bot_name}}:latest .
-
-# Target to run Docker container
+# Run Docker container
 docker-run:
-    docker run -e REPLICATE_API_TOKEN -d -p {{port}}:{{port}} --name {{bot_name}} {{bot_name}}:latest 
+    docker run -e REPLICATE_API_TOKEN -e REPLICATE_ORG -e MODEL_PHOTOMAKER -e MODEL_CLIP_INTERROGATOR -e MODEL_SDXL -e MODEL_BLIP -d -p {{port}}:{{port}} --name {{bot_name}} {{bot_name}}:latest
 
-docker-run-pull IMAGE:
-	docker run -e REPLICATE_API_TOKEN -d -p {{port}}:{{port}} --name {{bot_name}} {{IMAGE}}
-
-# Command to run both the above commands
-docker-rm F:
-    docker rm {{F}} {{bot_name}}
-    docker rmi {{F}} {{bot_name}}:latest
-
-# Command to remove a Docker container
-docker-rm-container:
-    docker rm {{bot_name}}
-
-# Command to remove a Docker image
-docker-rm-image:
-    docker rmi {{bot_name}}:latest
-
-docker-logs:
-	docker logs {{bot_name}}
-
-docker-logs-follow:
-	docker logs -f {{bot_name}}
-
+# Stop and remove Docker container
 docker-stop:
-	docker stop {{bot_name}}
+    docker stop {{bot_name}} || true
+    docker rm {{bot_name}} || true
 
-#MASSDRIVER
+# Rebuild and run
+rebuild: docker-stop build docker-run
+
+# Clean up Docker
+clean:
+    docker stop {{bot_name}} || true
+    docker rm {{bot_name}} || true
+    docker rmi {{bot_name}}:latest || true
+
+# Local development setup
+venv-clean:
+    rm -rf app/venv
+
+venv-setup: venv-clean
+    cd app && python3 -m venv venv
+    cd app && ./venv/bin/pip install -r requirements.txt
+
+# Run locally
+run: venv-setup
+    cd app && ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# Run locally (fast, assumes venv exists)
+run-fast:
+    cd app && ./venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# MassDriver deployment
 mass-push:
-	cd app && mass image push massdriver/{{bot_name}} -a {env_var('ARTIFACT_ID')} -r {{aws_region}}
-
-mass-publish:
-	cd tofu/massdriver && mass budle publish
-
-find-process:
-	ss -lptn 'sport = :{{port}}'
-	echo "kill -9 <PID>"
-
-rebuild: docker-stop docker-rm-container docker-build docker-run docker-logs-follow
+    mass push --env {{env_var('MASSDRIVER_ENV')}} --region {{env_var('AWS_DEFAULT_REGION')}}

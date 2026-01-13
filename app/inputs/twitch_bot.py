@@ -9,9 +9,6 @@ import utility
 from flavor import styles
 # from utility.cost import analysis, prediction
 
-from pydantic import BaseModel
-from typing import Optional
-
 BOT_NAME = os.environ.get("BOT_NAME", "not-set")
 
 help_text = "duckta12Lul"
@@ -25,25 +22,32 @@ loading_emoji = "duckta12Compute"
 discord_invite = "https://discord.gg/t5DVy7DdBP"
 github_url = "https://github.com/DuckTapeDevOps"
 
-
-
-
 bot = None
 twitch_token = None
 current_style = default_style
+
 def start_bot(body):
     '''
-    Starts the Twitch bot
+    Starts the Twitch bot (optional)
     '''
     twitch_token = body.twitch_token
     initial_channels = body.initial_channels
     global bot
+    
     if bot is not None:
         raise HTTPException(status_code=400, detail="Stream already running")
 
-    bot = TwitchBot(twitch_token, initial_channels.split(","))
-    asyncio.create_task(bot.start())
-    print(f"Started Twitch Bot in channels {initial_channels}")
+    # Only start Twitch bot if token is provided and not empty
+    if twitch_token and twitch_token.strip() and twitch_token != "test":
+        try:
+            bot = TwitchBot(twitch_token, initial_channels.split(","))
+            asyncio.create_task(bot.start())
+            print(f"Started Twitch Bot in channels {initial_channels}")
+        except Exception as e:
+            print(f"Twitch bot failed to start: {e}")
+            print("Continuing without Twitch bot...")
+    else:
+        print("No Twitch token provided, running API-only mode")
     
     return {"status": "success"}
 
