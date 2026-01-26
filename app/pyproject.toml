@@ -1,0 +1,20 @@
+[project]
+name = "neuroquack"
+version = "0.1.0"
+description = "NeuroQuack Twitch Bot with AI capabilities (Ducktronaut)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.104.1",
+    "jsonschema==4.20.0",
+    "pydantic==2.5.0",
+    "python-dotenv==1.0.0",
+    "replicate==0.22.0",
+    "requests==2.31.0",
+    "rich==13.7.0",
+    "twitchio==2.8.2",
+    "uvicorn[standard]==0.24.0",
+    "pillow==10.1.0",
+]
+
+# Note: This is an application, not a library package
+# We use --no-install-project with uv sync to skip installing the project itself

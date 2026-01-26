@@ -17,3 +17,6 @@ class BotConfig(BaseModel):
     api: APIConfig
     twitch: Optional[TwitchConfig] = None
     discord: Optional[DiscordConfig] = None
+
+class StartBotRequest(BaseModel):
+    twitch_auth: TwitchConfig
